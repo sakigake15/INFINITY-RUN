@@ -52,8 +52,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 
 // カメラの位置とアングルの設定
-camera.position.set(0, 10, 15); // より高く、より後ろに
-camera.rotation.x = -Math.PI / 4; // 45度下向き
+camera.position.set(0, 3, 4); // 高さを3に調整
+camera.rotation.x = -Math.PI / 6; // 30度下向きに調整
 
 // ウィンドウリサイズ対応
 window.addEventListener('resize', () => {
@@ -62,9 +62,98 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// プレイヤーキャラクターの読み込み
+const loader = new THREE.GLTFLoader();
+let player;
+
+loader.load(
+    'Rogue.glb',
+    function (gltf) {
+        player = gltf.scene;
+        player.scale.set(0.5, 0.5, 0.5); // モデルのサイズ調整
+        player.position.set(0, 0.3, 0); // レーンの上に配置（適度な高さで）
+        player.rotation.y = Math.PI; // キャラクターを前向きに
+        scene.add(player);
+    },
+    function (xhr) {
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    function (error) {
+        console.error('GLTFLoader error:', error);
+    }
+);
+
+// デバイスタイプの検出
+const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+// キャラクター移動の制御
+const moveSpeed = 0.2; // 移動速度
+let currentLane = 1; // 0: 左, 1: 中央, 2: 右
+let targetX = 0; // 目標のX座標
+let touchStartX = 0; // タッチ開始位置
+
+// PC: キーボード入力の処理
+if (!isMobile) {
+    window.addEventListener('keydown', (event) => {
+    if (!player) return; // プレイヤーがロードされていない場合は無視
+
+    switch(event.key) {
+        case 'ArrowLeft':
+            if (currentLane > 0) {
+                currentLane--;
+                targetX = (currentLane - 1) * laneWidth;
+            }
+            break;
+        case 'ArrowRight':
+            if (currentLane < 2) {
+                currentLane++;
+                targetX = (currentLane - 1) * laneWidth;
+            }
+            break;
+    }
+    });
+}
+
+// スマートフォン: タッチ操作の処理
+if (isMobile) {
+    window.addEventListener('touchstart', (event) => {
+        touchStartX = event.touches[0].clientX;
+    });
+
+    window.addEventListener('touchend', (event) => {
+        if (!player) return;
+
+        const touchEndX = event.changedTouches[0].clientX;
+        const swipeDistance = touchEndX - touchStartX;
+
+        if (Math.abs(swipeDistance) > 50) { // 50px以上のスワイプで方向転換
+            if (swipeDistance < 0 && currentLane > 0) { // 左スワイプ
+                currentLane--;
+                targetX = (currentLane - 1) * laneWidth;
+            } else if (swipeDistance > 0 && currentLane < 2) { // 右スワイプ
+                currentLane++;
+                targetX = (currentLane - 1) * laneWidth;
+            }
+        }
+    });
+}
+
+// スムーズな移動の処理
+function updatePlayerPosition() {
+    if (player) {
+        // 現在のX座標と目標のX座標の差を計算
+        const diff = targetX - player.position.x;
+        if (Math.abs(diff) > 0.01) {
+            // 目標に向かってスムーズに移動
+            player.position.x += diff * moveSpeed;
+        }
+    }
+}
+
 // レンダリングループ
 function animate() {
     requestAnimationFrame(animate);
+    updatePlayerPosition(); // プレイヤーの位置更新
     renderer.render(scene, camera);
 }
 
