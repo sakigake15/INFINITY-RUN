@@ -64,14 +64,46 @@ window.addEventListener('resize', () => {
 
 // ゲーム状態の管理
 let isGameOver = false;
+let isGameStarted = false;
 let obstacleSpawnTimeout;
 let score = 0;
+let highScore = localStorage.getItem('highScore') || 0;
+
+// ハイスコアの更新
+function updateHighScore() {
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+    }
+    document.getElementById('highScore').textContent = highScore;
+}
+
+// ゲームの開始
+function startGame() {
+    isGameStarted = true;
+    isGameOver = false;
+    document.getElementById('titleScreen').classList.add('hidden');
+    document.getElementById('scoreDisplay').classList.remove('hidden');
+    document.getElementById('scoreDisplay').style.animation = 'fadeIn 0.5s ease forwards';
+    spawnObstacle();
+    
+    if (runningAction) {
+        runningAction.reset();
+        runningAction.play();
+    }
+}
+
+// タイトルに戻る
+function backToTitle() {
+    resetGame();
+}
 
 // スコアの初期化
 function initScore() {
     score = 0;
     document.getElementById('currentScore').textContent = '0';
     document.getElementById('finalScore').textContent = '0';
+    document.getElementById('scoreDisplay').classList.add('hidden');
 }
 
 // プレイヤーキャラクターと障害物の読み込み
@@ -123,7 +155,7 @@ let touchStartX = 0; // タッチ開始位置
 // PC: キーボード入力の処理
 if (!isMobile) {
     window.addEventListener('keydown', (event) => {
-        if (!player || isGameOver) return; // プレイヤーがロードされていない場合や、ゲームオーバー時は無視
+        if (!player || isGameOver || !isGameStarted) return;
 
         switch(event.key) {
             case 'ArrowLeft':
@@ -149,7 +181,7 @@ if (isMobile) {
     });
 
     window.addEventListener('touchend', (event) => {
-        if (!player || isGameOver) return;
+        if (!player || isGameOver || !isGameStarted) return;
 
         const touchEndX = event.changedTouches[0].clientX;
         const swipeDistance = touchEndX - touchStartX;
@@ -201,6 +233,7 @@ function checkCollision() {
 // ゲーム状態のリセット
 function resetGame() {
     isGameOver = false;
+    isGameStarted = false;
     obstacleSpeed = 0.1;
     currentLane = 1;
     targetX = 0;
@@ -224,12 +257,6 @@ function resetGame() {
                 }
             }
         });
-
-        // アニメーションを再開
-        if (runningAction) {
-            runningAction.reset();
-            runningAction.play();
-        }
     }
 
     // 障害物を削除
@@ -238,11 +265,9 @@ function resetGame() {
         obstacle = null;
     }
 
-    // 障害物の生成を再開
-    spawnObstacle();
-
-    // ゲームオーバー画面を非表示
+    // ゲームオーバー画面を非表示にしてタイトル画面を表示
     document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('titleScreen').classList.remove('hidden');
 }
 
 // ゲームオーバー処理
@@ -279,24 +304,30 @@ function handleGameOver() {
     }
 
     // スコアを更新してゲームオーバー画面を表示
+    updateHighScore();
     document.getElementById('finalScore').textContent = score;
     const gameOverScreen = document.getElementById('gameOverScreen');
     gameOverScreen.classList.remove('hidden');
 }
 
-// リトライボタンのイベントリスナーを設定
+// ボタンのイベントリスナーを設定
 document.getElementById('retryButton').addEventListener('click', resetGame);
+document.getElementById('startButton').addEventListener('click', startGame);
+document.getElementById('titleButton').addEventListener('click', backToTitle);
+
+// ハイスコアの初期表示
+document.getElementById('highScore').textContent = highScore;
 
 // 障害物の生成
 function spawnObstacle() {
-    if (isGameOver) return;
+    if (isGameOver || !isGameStarted) return;
 
     // 既存の障害物が画面外に出ているか、存在しない場合のみ新しい障害物を生成
     if (!obstacle) {
         loader.load(
             'barrel_small.gltf',
             function (gltf) {
-                if (isGameOver) return; // ロード完了時にもゲームオーバーチェック
+                if (isGameOver || !isGameStarted) return;
                 
                 obstacle = gltf.scene;
                 obstacle.scale.set(1.0, 1.0, 1.0);
@@ -325,7 +356,7 @@ function spawnObstacle() {
 
 // 障害物の移動処理
 function updateObstaclePosition() {
-    if (obstacle && !isGameOver) {
+    if (obstacle && !isGameOver && isGameStarted) {
         obstacle.position.z += obstacleSpeed; // 手前に移動
         
         // 衝突判定
@@ -352,7 +383,7 @@ function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
     
-    if (!isGameOver) {
+    if (!isGameOver && isGameStarted) {
         updatePlayerPosition(); // プレイヤーの位置更新
         updateObstaclePosition(); // 障害物の位置更新
     }
@@ -367,8 +398,5 @@ function animate() {
 // アニメーションの開始
 animate();
 
-// 最初の障害物生成を開始
-spawnObstacle();
-
-// 初期スコア表示の設定
+// 初期化
 initScore();

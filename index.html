@@ -8,6 +8,18 @@
 </head>
 <body>
     <canvas id="game"></canvas>
+
+    <!-- タイトル画面 -->
+    <div id="titleScreen" class="title-screen">
+        <div class="title-content">
+            <h1>3Dレーンゲーム</h1>
+            <p class="instructions">
+                ← →キーまたはスワイプで移動<br>
+                障害物を避けてスコアを稼ごう！
+            </p>
+            <button id="startButton">ゲームスタート</button>
+        </div>
+    </div>
     
     <!-- スコア表示 -->
     <div id="scoreDisplay" class="score-display">
@@ -18,8 +30,15 @@
     <div id="gameOverScreen" class="game-over-screen hidden">
         <div class="game-over-content">
             <h1>ゲームオーバー</h1>
-            <p>スコア: <span id="finalScore">0</span></p>
-            <button id="retryButton">もう一度プレイ</button>
+            <div class="score-container">
+                <p class="final-score">スコア: <span id="finalScore">0</span></p>
+                <p class="high-score">ハイスコア: <span id="highScore">0</span></p>
+            </div>
+            <p class="game-over-message">タイトルに戻るかリトライしてください</p>
+            <div class="button-container">
+                <button id="retryButton">もう一度プレイ</button>
+                <button id="titleButton">タイトルに戻る</button>
+            </div>
         </div>
     </div>
 
