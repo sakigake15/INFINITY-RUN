@@ -62,9 +62,11 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// プレイヤーキャラクターの読み込み
+// プレイヤーキャラクターと障害物の読み込み
 const loader = new THREE.GLTFLoader();
 let player;
+let obstacle;
+
 
 loader.load(
     'Rogue.glb',
@@ -150,12 +152,66 @@ function updatePlayerPosition() {
     }
 }
 
+// 障害物の設定
+const obstacleSpeed = 0.1;
+const minSpawnInterval = 2000; // 最小生成間隔（ミリ秒）
+const maxSpawnInterval = 4000; // 最大生成間隔（ミリ秒）
+
+// 障害物の生成
+function spawnObstacle() {
+    // 既存の障害物が画面外に出ているか、存在しない場合のみ新しい障害物を生成
+    if (!obstacle) {
+        loader.load(
+            'barrel_small.gltf',
+            function (gltf) {
+                obstacle = gltf.scene;
+                obstacle.scale.set(1.0, 1.0, 1.0);
+                
+                // ランダムなレーンを選択（0, 1, 2）
+                const randomLane = Math.floor(Math.random() * 3);
+                const xPosition = (randomLane - 1) * laneWidth;
+                
+                obstacle.position.set(xPosition, 0, -15);
+                scene.add(obstacle);
+                
+                // 次の障害物生成までの時間をランダムに設定
+                const nextSpawnTime = minSpawnInterval + Math.random() * (maxSpawnInterval - minSpawnInterval);
+                setTimeout(spawnObstacle, nextSpawnTime);
+            },
+            null,
+            function (error) {
+                console.error('GLTFLoader error:', error);
+            }
+        );
+    } else {
+        // 既存の障害物がある場合は、少し待ってから再試行
+        setTimeout(spawnObstacle, 1000);
+    }
+}
+
+// 障害物の移動処理
+function updateObstaclePosition() {
+    if (obstacle) {
+        obstacle.position.z += obstacleSpeed; // 手前に移動
+        
+        // 画面外に出たら削除
+        if (obstacle.position.z > 2) {
+            scene.remove(obstacle);
+            obstacle = null;
+        }
+    }
+}
+
 // レンダリングループ
 function animate() {
     requestAnimationFrame(animate);
     updatePlayerPosition(); // プレイヤーの位置更新
+    updateObstaclePosition(); // 障害物の位置更新
     renderer.render(scene, camera);
 }
 
 // アニメーションの開始
 animate();
+
+// 最初の障害物生成を開始
+spawnObstacle();
