@@ -62,11 +62,25 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ゲーム状態の管理
+let isGameOver = false;
+let obstacleSpawnTimeout;
+let score = 0;
+
+// スコアの初期化
+function initScore() {
+    score = 0;
+    document.getElementById('currentScore').textContent = '0';
+    document.getElementById('finalScore').textContent = '0';
+}
+
 // プレイヤーキャラクターと障害物の読み込み
 const loader = new THREE.GLTFLoader();
 let player;
 let obstacle;
-
+let mixer;
+let runningAction;
+const clock = new THREE.Clock();
 
 loader.load(
     'Rogue.glb',
@@ -76,6 +90,18 @@ loader.load(
         player.position.set(0, 0.3, 0); // レーンの上に配置（適度な高さで）
         player.rotation.y = Math.PI; // キャラクターを前向きに
         scene.add(player);
+
+        // アニメーションの設定
+        mixer = new THREE.AnimationMixer(player);
+        const animations = gltf.animations;
+        
+        // Running_Aアニメーションを検索して設定
+        const runningAnimation = animations.find(anim => anim.name === 'Running_A');
+        if (runningAnimation) {
+            runningAction = mixer.clipAction(runningAnimation);
+            runningAction.setLoop(THREE.LoopRepeat); // 無限ループ設定
+            runningAction.play();
+        }
     },
     function (xhr) {
         console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -97,22 +123,22 @@ let touchStartX = 0; // タッチ開始位置
 // PC: キーボード入力の処理
 if (!isMobile) {
     window.addEventListener('keydown', (event) => {
-    if (!player) return; // プレイヤーがロードされていない場合は無視
+        if (!player || isGameOver) return; // プレイヤーがロードされていない場合や、ゲームオーバー時は無視
 
-    switch(event.key) {
-        case 'ArrowLeft':
-            if (currentLane > 0) {
-                currentLane--;
-                targetX = (currentLane - 1) * laneWidth;
-            }
-            break;
-        case 'ArrowRight':
-            if (currentLane < 2) {
-                currentLane++;
-                targetX = (currentLane - 1) * laneWidth;
-            }
-            break;
-    }
+        switch(event.key) {
+            case 'ArrowLeft':
+                if (currentLane > 0) {
+                    currentLane--;
+                    targetX = (currentLane - 1) * laneWidth;
+                }
+                break;
+            case 'ArrowRight':
+                if (currentLane < 2) {
+                    currentLane++;
+                    targetX = (currentLane - 1) * laneWidth;
+                }
+                break;
+        }
     });
 }
 
@@ -123,7 +149,7 @@ if (isMobile) {
     });
 
     window.addEventListener('touchend', (event) => {
-        if (!player) return;
+        if (!player || isGameOver) return;
 
         const touchEndX = event.changedTouches[0].clientX;
         const swipeDistance = touchEndX - touchStartX;
@@ -153,17 +179,125 @@ function updatePlayerPosition() {
 }
 
 // 障害物の設定
-const obstacleSpeed = 0.1;
+let obstacleSpeed = 0.1;
 const minSpawnInterval = 2000; // 最小生成間隔（ミリ秒）
 const maxSpawnInterval = 4000; // 最大生成間隔（ミリ秒）
 
+// 衝突判定
+function checkCollision() {
+    if (!player || !obstacle || isGameOver) return false;
+    
+    // プレイヤーと障害物の距離を計算
+    const dx = player.position.x - obstacle.position.x;
+    const dz = player.position.z - obstacle.position.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+    
+    // 衝突判定の閾値（キャラクターと障害物のサイズを考慮して調整）
+    const collisionThreshold = 1.0;
+    
+    return distance < collisionThreshold;
+}
+
+// ゲーム状態のリセット
+function resetGame() {
+    isGameOver = false;
+    obstacleSpeed = 0.1;
+    currentLane = 1;
+    targetX = 0;
+    initScore();
+
+    // プレイヤーの位置をリセット
+    if (player) {
+        player.position.set(0, 0.3, 0);
+        
+        // プレイヤーの色をリセット
+        player.traverse((child) => {
+            if (child.isMesh && child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(mat => {
+                        if (mat.originalColor) {
+                            mat.emissive.set(0, 0, 0);
+                        }
+                    });
+                } else if (child.material.originalColor) {
+                    child.material.emissive.set(0, 0, 0);
+                }
+            }
+        });
+
+        // アニメーションを再開
+        if (runningAction) {
+            runningAction.reset();
+            runningAction.play();
+        }
+    }
+
+    // 障害物を削除
+    if (obstacle) {
+        scene.remove(obstacle);
+        obstacle = null;
+    }
+
+    // 障害物の生成を再開
+    spawnObstacle();
+
+    // ゲームオーバー画面を非表示
+    document.getElementById('gameOverScreen').classList.add('hidden');
+}
+
+// ゲームオーバー処理
+function handleGameOver() {
+    isGameOver = true;
+    console.log("ゲームオーバー");
+
+    // プレイヤーモデルの全マテリアルを赤く変更
+    player.traverse((child) => {
+        if (child.isMesh && child.material) {
+            // 配列の場合は各マテリアルを処理
+            if (Array.isArray(child.material)) {
+                child.material.forEach(mat => {
+                    mat.originalColor = mat.color.clone();
+                    mat.emissive = new THREE.Color(0xff0000);
+                });
+            } else {
+                // 単一のマテリアルの場合
+                child.material.originalColor = child.material.color.clone();
+                child.material.emissive = new THREE.Color(0xff0000);
+            }
+        }
+    });
+
+    // アニメーションを停止
+    if (runningAction) {
+        runningAction.stop();
+    }
+
+    // 障害物の生成と移動を停止
+    obstacleSpeed = 0;
+    if (obstacleSpawnTimeout) {
+        clearTimeout(obstacleSpawnTimeout);
+    }
+
+    // スコアを更新してゲームオーバー画面を表示
+    document.getElementById('finalScore').textContent = score;
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    gameOverScreen.classList.remove('hidden');
+}
+
+// リトライボタンのイベントリスナーを設定
+document.getElementById('retryButton').addEventListener('click', resetGame);
+
 // 障害物の生成
 function spawnObstacle() {
+    if (isGameOver) return;
+
     // 既存の障害物が画面外に出ているか、存在しない場合のみ新しい障害物を生成
     if (!obstacle) {
         loader.load(
             'barrel_small.gltf',
             function (gltf) {
+                if (isGameOver) return; // ロード完了時にもゲームオーバーチェック
+                
                 obstacle = gltf.scene;
                 obstacle.scale.set(1.0, 1.0, 1.0);
                 
@@ -176,7 +310,7 @@ function spawnObstacle() {
                 
                 // 次の障害物生成までの時間をランダムに設定
                 const nextSpawnTime = minSpawnInterval + Math.random() * (maxSpawnInterval - minSpawnInterval);
-                setTimeout(spawnObstacle, nextSpawnTime);
+                obstacleSpawnTimeout = setTimeout(spawnObstacle, nextSpawnTime);
             },
             null,
             function (error) {
@@ -185,19 +319,30 @@ function spawnObstacle() {
         );
     } else {
         // 既存の障害物がある場合は、少し待ってから再試行
-        setTimeout(spawnObstacle, 1000);
+        obstacleSpawnTimeout = setTimeout(spawnObstacle, 1000);
     }
 }
 
 // 障害物の移動処理
 function updateObstaclePosition() {
-    if (obstacle) {
+    if (obstacle && !isGameOver) {
         obstacle.position.z += obstacleSpeed; // 手前に移動
         
-        // 画面外に出たら削除
+        // 衝突判定
+        if (checkCollision()) {
+            handleGameOver();
+            return;
+        }
+        
+        // 画面外に出たら削除し、スコアを加算
         if (obstacle.position.z > 2) {
+            score += 100; // 障害物1つにつき100点
+            document.getElementById('currentScore').textContent = score;
             scene.remove(obstacle);
             obstacle = null;
+            
+            // 難易度を少しずつ上げる
+            obstacleSpeed = Math.min(obstacleSpeed + 0.005, 0.2); // 最大速度0.2まで
         }
     }
 }
@@ -205,8 +350,17 @@ function updateObstaclePosition() {
 // レンダリングループ
 function animate() {
     requestAnimationFrame(animate);
-    updatePlayerPosition(); // プレイヤーの位置更新
-    updateObstaclePosition(); // 障害物の位置更新
+    const delta = clock.getDelta();
+    
+    if (!isGameOver) {
+        updatePlayerPosition(); // プレイヤーの位置更新
+        updateObstaclePosition(); // 障害物の位置更新
+    }
+    
+    if (mixer) {
+        mixer.update(delta);
+    }
+    
     renderer.render(scene, camera);
 }
 
@@ -215,3 +369,6 @@ animate();
 
 // 最初の障害物生成を開始
 spawnObstacle();
+
+// 初期スコア表示の設定
+initScore();
