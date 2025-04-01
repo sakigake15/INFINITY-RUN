@@ -349,7 +349,7 @@ function spawnObstacle() {
             scene.add(newObstacle);
             obstacles.push(newObstacle);
 
-            // コインを生成（障害物と異なるレーンに）
+            // コインを生成
             spawnCoin(randomLane);
 
             // 0.5-1秒後に次の障害物を生成
@@ -374,14 +374,25 @@ function spawnCoin(obstacleRandomLane) {
             const coin = gltf.scene;
             coin.scale.set(0.5, 0.5, 0.5);
             
-            // 障害物と異なるレーンを選択
-            let availableLanes = [0, 1, 2].filter(lane => lane !== obstacleRandomLane);
-            const randomLane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
-            const xPosition = (randomLane - 1) * laneWidth;
+            // 全てのレーンでコインを生成できるようにする
+            let availableLanes = [0, 1, 2];
+            // ランダムに1-2個のコインを生成
+            const numCoins = Math.floor(Math.random() * 2) + 1;
             
-            coin.position.set(xPosition, 0.5, -15);  // 少し浮かせる
-            scene.add(coin);
-            coins.push(coin);
+            for (let i = 0; i < numCoins; i++) {
+                const randomLane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+                const xPosition = (randomLane - 1) * laneWidth;
+                
+                // 新しいコインを生成して配置
+                const newCoin = coin.clone();
+                newCoin.position.set(xPosition, 0.5, -15 - (i * 2));  // 少し浮かせる、複数の場合は間隔を開ける
+                scene.add(newCoin);
+                coins.push(newCoin);
+                
+                // 使用したレーンを除外（同じ位置には生成しない）
+                availableLanes = availableLanes.filter(lane => lane !== randomLane);
+                if (availableLanes.length === 0) break; // 全てのレーンを使用した場合は終了
+            }
         },
         null,
         function (error) {
@@ -478,5 +489,3 @@ function animate() {
 
 // アニメーションの開始
 animate();
-
-// 初期化
