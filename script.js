@@ -65,7 +65,6 @@ window.addEventListener('resize', () => {
 // ゲーム状態の管理
 let isGameOver = false;
 let isGameStarted = false;
-let obstacleSpawnTimeout;
 let score = 0;
 let highScore = localStorage.getItem('highScore') || 0;
 
@@ -109,7 +108,7 @@ function initScore() {
 // プレイヤーキャラクターと障害物の読み込み
 const loader = new THREE.GLTFLoader();
 let player;
-let obstacle;
+let obstacles = [];
 let mixer;
 let runningAction;
 const clock = new THREE.Clock();
@@ -211,30 +210,36 @@ function updatePlayerPosition() {
 }
 
 // 障害物の設定
-let obstacleSpeed = 0.1;
-const minSpawnInterval = 2000; // 最小生成間隔（ミリ秒）
-const maxSpawnInterval = 4000; // 最大生成間隔（ミリ秒）
+let obstacleSpeed = 0.2;
+const minSpawnInterval = 500; // 最小生成間隔（ミリ秒）
+const maxSpawnInterval = 1000; // 最大生成間隔（ミリ秒）
 
 // 衝突判定
 function checkCollision() {
-    if (!player || !obstacle || isGameOver) return false;
+    if (!player || isGameOver) return false;
     
-    // プレイヤーと障害物の距離を計算
-    const dx = player.position.x - obstacle.position.x;
-    const dz = player.position.z - obstacle.position.z;
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    
-    // 衝突判定の閾値（キャラクターと障害物のサイズを考慮して調整）
-    const collisionThreshold = 1.0;
-    
-    return distance < collisionThreshold;
+    // 全ての障害物との衝突判定を行う
+    for (const obstacle of obstacles) {
+        // プレイヤーと障害物の距離を計算
+        const dx = player.position.x - obstacle.position.x;
+        const dz = player.position.z - obstacle.position.z;
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        
+        // 衝突判定の閾値（キャラクターと障害物のサイズを考慮して調整）
+        const collisionThreshold = 1.0;
+        
+        if (distance < collisionThreshold) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // ゲーム状態のリセット
 function resetGame() {
     isGameOver = false;
     isGameStarted = false;
-    obstacleSpeed = 0.1;
+    obstacleSpeed = 0.2;
     currentLane = 1;
     targetX = 0;
     initScore();
@@ -259,11 +264,11 @@ function resetGame() {
         });
     }
 
-    // 障害物を削除
-    if (obstacle) {
+    // 全ての障害物を削除
+    for (const obstacle of obstacles) {
         scene.remove(obstacle);
-        obstacle = null;
     }
+    obstacles = [];
 
     // ゲームオーバー画面を非表示にしてタイトル画面を表示
     document.getElementById('gameOverScreen').classList.add('hidden');
@@ -297,11 +302,8 @@ function handleGameOver() {
         runningAction.stop();
     }
 
-    // 障害物の生成と移動を停止
+    // 障害物の移動を停止
     obstacleSpeed = 0;
-    if (obstacleSpawnTimeout) {
-        clearTimeout(obstacleSpawnTimeout);
-    }
 
     // スコアを更新してゲームオーバー画面を表示
     updateHighScore();
@@ -322,59 +324,60 @@ document.getElementById('highScore').textContent = highScore;
 function spawnObstacle() {
     if (isGameOver || !isGameStarted) return;
 
-    // 既存の障害物が画面外に出ているか、存在しない場合のみ新しい障害物を生成
-    if (!obstacle) {
-        loader.load(
-            'barrel_small.gltf',
-            function (gltf) {
-                if (isGameOver || !isGameStarted) return;
-                
-                obstacle = gltf.scene;
-                obstacle.scale.set(1.0, 1.0, 1.0);
-                
-                // ランダムなレーンを選択（0, 1, 2）
-                const randomLane = Math.floor(Math.random() * 3);
-                const xPosition = (randomLane - 1) * laneWidth;
-                
-                obstacle.position.set(xPosition, 0, -15);
-                scene.add(obstacle);
-                
-                // 次の障害物生成までの時間をランダムに設定
-                const nextSpawnTime = minSpawnInterval + Math.random() * (maxSpawnInterval - minSpawnInterval);
-                obstacleSpawnTimeout = setTimeout(spawnObstacle, nextSpawnTime);
-            },
-            null,
-            function (error) {
-                console.error('GLTFLoader error:', error);
-            }
-        );
-    } else {
-        // 既存の障害物がある場合は、少し待ってから再試行
-        obstacleSpawnTimeout = setTimeout(spawnObstacle, 1000);
-    }
+    loader.load(
+        'barrel_small.gltf',
+        function (gltf) {
+            if (isGameOver || !isGameStarted) return;
+            
+            const newObstacle = gltf.scene;
+            newObstacle.scale.set(1.0, 1.0, 1.0);
+            
+            // ランダムなレーンを選択（0, 1, 2）
+            const randomLane = Math.floor(Math.random() * 3);
+            const xPosition = (randomLane - 1) * laneWidth;
+            
+            newObstacle.position.set(xPosition, 0, -15);
+            scene.add(newObstacle);
+            obstacles.push(newObstacle);
+
+            // 0.5-1秒後に次の障害物を生成
+            setTimeout(spawnObstacle, minSpawnInterval + Math.random() * (maxSpawnInterval - minSpawnInterval));
+        },
+        null,
+        function (error) {
+            console.error('GLTFLoader error:', error);
+        }
+    );
 }
 
 // 障害物の移動処理
 function updateObstaclePosition() {
-    if (obstacle && !isGameOver && isGameStarted) {
+    if (isGameOver || !isGameStarted) return;
+
+    // 画面外に出た障害物を格納する配列
+    const removeObstacles = [];
+
+    // 全ての障害物を移動
+    for (const obstacle of obstacles) {
         obstacle.position.z += obstacleSpeed; // 手前に移動
         
-        // 衝突判定
-        if (checkCollision()) {
-            handleGameOver();
-            return;
-        }
-        
-        // 画面外に出たら削除し、スコアを加算
+        // 画面外に出たら削除対象に追加
         if (obstacle.position.z > 2) {
             score += 100; // 障害物1つにつき100点
             document.getElementById('currentScore').textContent = score;
-            scene.remove(obstacle);
-            obstacle = null;
-            
-            // 難易度を少しずつ上げる
-            obstacleSpeed = Math.min(obstacleSpeed + 0.005, 0.2); // 最大速度0.2まで
+            removeObstacles.push(obstacle);
         }
+    }
+
+    // 画面外の障害物を削除
+    for (const obstacle of removeObstacles) {
+        scene.remove(obstacle);
+        obstacles.splice(obstacles.indexOf(obstacle), 1);
+    }
+
+    // 衝突判定
+    if (checkCollision()) {
+        handleGameOver();
     }
 }
 
@@ -399,4 +402,3 @@ function animate() {
 animate();
 
 // 初期化
-initScore();
