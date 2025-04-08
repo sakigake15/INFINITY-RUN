@@ -78,8 +78,8 @@ export class ObstacleManager {
                 }
             );
 
-            // 次の障害物までのカウントダウンをセット（1, 2, 3のいずれか）
-            this.obstacleCountdown = Math.floor(Math.random() * 3) + 1;
+            // 次の障害物までのカウントダウンをセット（0, 1, 2のいずれか）
+            this.obstacleCountdown = Math.floor(Math.random() * 3);
         } else {
             this.obstacleCountdown--;
         }
