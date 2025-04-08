@@ -8,10 +8,16 @@ export class ObstacleManager {
         this.coins = [];
         this.loader = new THREE.GLTFLoader();
         
-        this.minSpawnInterval = 500;
-        this.maxSpawnInterval = 1000;
+        // 障害物のモデルパスを配列で保持
+        this.obstacleModels = [
+            {path: 'barrel_small.gltf', scale: 1.0},
+            {path: 'detail_rocks_small.gltf.glb', scale: 2.0},
+            {path: 'detail_treeC.gltf.glb', scale: 2.0}
+        ];
+        
         this.coinSpawnInterval = 300; // コインの生成間隔を0.3秒に設定
         this.coinSpawnTimer = null;
+        this.obstacleIntervals = [300, 600, 900]; // 障害物の出現間隔（0.3, 0.6, 0.9秒）
     }
 
     startSpawning() {
@@ -35,13 +41,16 @@ export class ObstacleManager {
     spawnObstacle() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
+        // ランダムに障害物モデルを選択
+        const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
+        
         this.loader.load(
-            'barrel_small.gltf',
+            randomModel.path,
             (gltf) => {
                 if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
                 
                 const newObstacle = gltf.scene;
-                newObstacle.scale.set(1.0, 1.0, 1.0);
+                newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
                 
                 const randomLane = Math.floor(Math.random() * 3);
                 const xPosition = (randomLane - 1) * this.laneWidth;
@@ -50,9 +59,9 @@ export class ObstacleManager {
                 this.scene.add(newObstacle);
                 this.obstacles.push(newObstacle);
 
-                // 次の障害物を生成
-                setTimeout(() => this.spawnObstacle(), 
-                    this.minSpawnInterval + Math.random() * (this.maxSpawnInterval - this.minSpawnInterval));
+                // 次の障害物を生成（0.3, 0.6, 0.9秒のいずれか）
+                const randomInterval = this.obstacleIntervals[Math.floor(Math.random() * this.obstacleIntervals.length)];
+                setTimeout(() => this.spawnObstacle(), randomInterval);
             },
             null,
             (error) => {
