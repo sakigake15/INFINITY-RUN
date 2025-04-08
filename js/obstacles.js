@@ -15,64 +15,31 @@ export class ObstacleManager {
             {path: 'detail_treeC.gltf.glb', scale: 2.0}
         ];
         
-        this.coinSpawnInterval = 300; // コインの生成間隔を0.3秒に設定
-        this.coinSpawnTimer = null;
-        this.obstacleIntervals = [300, 600, 900]; // 障害物の出現間隔（0.3, 0.6, 0.9秒）
+        this.spawnInterval = 300; // 生成間隔（0.3秒）
+        this.spawnTimer = null;
+        this.obstacleCountdown = 0; // 障害物生成までのカウントダウン
     }
 
     startSpawning() {
-        this.spawnObstacle();
-        this.startCoinSpawning();
+        if (this.spawnTimer) return;
+        this.spawnObjects();
+        this.spawnTimer = setInterval(() => this.spawnObjects(), this.spawnInterval);
     }
 
-    startCoinSpawning() {
-        if (this.coinSpawnTimer) return;
-        this.spawnCoin();
-        this.coinSpawnTimer = setInterval(() => this.spawnCoin(), this.coinSpawnInterval);
-    }
-
-    stopCoinSpawning() {
-        if (this.coinSpawnTimer) {
-            clearInterval(this.coinSpawnTimer);
-            this.coinSpawnTimer = null;
+    stopSpawning() {
+        if (this.spawnTimer) {
+            clearInterval(this.spawnTimer);
+            this.spawnTimer = null;
         }
     }
 
-    spawnObstacle() {
+    spawnObjects() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
-        // ランダムに障害物モデルを選択
-        const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
-        
-        this.loader.load(
-            randomModel.path,
-            (gltf) => {
-                if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
-                
-                const newObstacle = gltf.scene;
-                newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
-                
-                const randomLane = Math.floor(Math.random() * 3);
-                const xPosition = (randomLane - 1) * this.laneWidth;
-                
-                newObstacle.position.set(xPosition, 0, -15);
-                this.scene.add(newObstacle);
-                this.obstacles.push(newObstacle);
+        const randomLane = Math.floor(Math.random() * 3);
+        const xPosition = (randomLane - 1) * this.laneWidth;
 
-                // 次の障害物を生成（0.3, 0.6, 0.9秒のいずれか）
-                const randomInterval = this.obstacleIntervals[Math.floor(Math.random() * this.obstacleIntervals.length)];
-                setTimeout(() => this.spawnObstacle(), randomInterval);
-            },
-            null,
-            (error) => {
-                console.error('GLTFLoader error:', error);
-            }
-        );
-    }
-
-    spawnCoin() {
-        if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
-
+        // コインの生成（毎回）
         this.loader.load(
             'Coin_A.gltf',
             (gltf) => {
@@ -80,10 +47,6 @@ export class ObstacleManager {
                 
                 const coin = gltf.scene;
                 coin.scale.set(0.5, 0.5, 0.5);
-                
-                const randomLane = Math.floor(Math.random() * 3);
-                const xPosition = (randomLane - 1) * this.laneWidth;
-                
                 const newCoin = coin.clone();
                 newCoin.position.set(xPosition, 0.5, -15);
                 this.scene.add(newCoin);
@@ -94,6 +57,32 @@ export class ObstacleManager {
                 console.error('GLTFLoader error:', error);
             }
         );
+
+        if (this.obstacleCountdown === 0) {
+            // 障害物の生成
+            const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
+            this.loader.load(
+                randomModel.path,
+                (gltf) => {
+                    if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
+                    
+                    const newObstacle = gltf.scene;
+                    newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
+                    newObstacle.position.set(xPosition, 0, -15);
+                    this.scene.add(newObstacle);
+                    this.obstacles.push(newObstacle);
+                },
+                null,
+                (error) => {
+                    console.error('GLTFLoader error:', error);
+                }
+            );
+
+            // 次の障害物までのカウントダウンをセット（1, 2, 3のいずれか）
+            this.obstacleCountdown = Math.floor(Math.random() * 3) + 1;
+        } else {
+            this.obstacleCountdown--;
+        }
     }
 
     checkCollision() {
@@ -187,6 +176,6 @@ export class ObstacleManager {
         this.coins = [];
         
         // コインの生成を停止
-        this.stopCoinSpawning();
+        this.stopSpawning();
     }
 }
