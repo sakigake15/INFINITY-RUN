@@ -10,6 +10,26 @@ export class ObstacleManager {
         
         this.minSpawnInterval = 500;
         this.maxSpawnInterval = 1000;
+        this.coinSpawnInterval = 300; // コインの生成間隔を0.3秒に設定
+        this.coinSpawnTimer = null;
+    }
+
+    startSpawning() {
+        this.spawnObstacle();
+        this.startCoinSpawning();
+    }
+
+    startCoinSpawning() {
+        if (this.coinSpawnTimer) return;
+        this.spawnCoin();
+        this.coinSpawnTimer = setInterval(() => this.spawnCoin(), this.coinSpawnInterval);
+    }
+
+    stopCoinSpawning() {
+        if (this.coinSpawnTimer) {
+            clearInterval(this.coinSpawnTimer);
+            this.coinSpawnTimer = null;
+        }
     }
 
     spawnObstacle() {
@@ -30,9 +50,6 @@ export class ObstacleManager {
                 this.scene.add(newObstacle);
                 this.obstacles.push(newObstacle);
 
-                // コインを生成
-                this.spawnCoin(randomLane);
-
                 // 次の障害物を生成
                 setTimeout(() => this.spawnObstacle(), 
                     this.minSpawnInterval + Math.random() * (this.maxSpawnInterval - this.minSpawnInterval));
@@ -44,7 +61,7 @@ export class ObstacleManager {
         );
     }
 
-    spawnCoin(obstacleRandomLane) {
+    spawnCoin() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
         this.loader.load(
@@ -55,21 +72,13 @@ export class ObstacleManager {
                 const coin = gltf.scene;
                 coin.scale.set(0.5, 0.5, 0.5);
                 
-                let availableLanes = [0, 1, 2];
-                const numCoins = Math.floor(Math.random() * 2) + 1;
+                const randomLane = Math.floor(Math.random() * 3);
+                const xPosition = (randomLane - 1) * this.laneWidth;
                 
-                for (let i = 0; i < numCoins; i++) {
-                    const randomLane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
-                    const xPosition = (randomLane - 1) * this.laneWidth;
-                    
-                    const newCoin = coin.clone();
-                    newCoin.position.set(xPosition, 0.5, -15 - (i * 2));
-                    this.scene.add(newCoin);
-                    this.coins.push(newCoin);
-                    
-                    availableLanes = availableLanes.filter(lane => lane !== randomLane);
-                    if (availableLanes.length === 0) break;
-                }
+                const newCoin = coin.clone();
+                newCoin.position.set(xPosition, 0.5, -15);
+                this.scene.add(newCoin);
+                this.coins.push(newCoin);
             },
             null,
             (error) => {
@@ -167,5 +176,8 @@ export class ObstacleManager {
             this.scene.remove(coin);
         }
         this.coins = [];
+        
+        // コインの生成を停止
+        this.stopCoinSpawning();
     }
 }

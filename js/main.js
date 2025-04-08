@@ -45,7 +45,7 @@ class Game {
 
     startGame() {
         this.gameState.startGame();
-        this.obstacleManager.spawnObstacle();
+        this.obstacleManager.startSpawning();
         this.player.startRunning();
     }
 
