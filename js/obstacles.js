@@ -19,15 +19,10 @@ export class ObstacleManager {
         this.spawnTimer = null;
         this.lastCoinZ = 0; // 最後にコインを生成したZ座標
         this.lastObstacleZ = 0; // 最後に障害物を生成したZ座標
-        this.coinSpawnDistance = 3; // コインを生成する間隔（マス目単位）
-        this.obstacleSpawnDistances = [3, 6, 9]; // 障害物の生成間隔の選択肢
-        this.nextObstacleDistance = this.getRandomObstacleDistance(); // 次の障害物までの距離
+        this.coinSpawnDistance = 3; // コインを生成する間隔（3マス置き）
+        this.obstacleChance = 0.15; // 障害物生成確率（15%）
         this.currentCoinLane = -1;
         this.lastObstacleLane = -1;
-    }
-
-    getRandomObstacleDistance() {
-        return this.obstacleSpawnDistances[Math.floor(Math.random() * this.obstacleSpawnDistances.length)];
     }
 
     startSpawning() {
@@ -48,36 +43,24 @@ export class ObstacleManager {
 
         const playerZ = this.player.getModel().position.z;
         const shouldSpawnCoin = Math.abs(playerZ - this.lastCoinZ) >= this.coinSpawnDistance;
-        const shouldSpawnObstacle = Math.abs(playerZ - this.lastObstacleZ) >= this.nextObstacleDistance;
         const targetZ = playerZ - 15; // 生成位置は常にプレイヤーの15マス先
 
-        // 両方生成する場合
-        if (shouldSpawnCoin && shouldSpawnObstacle) {
-            // まずコインのレーンを決定
-            const coinLane = Math.floor(Math.random() * 3);
-            this.currentCoinLane = coinLane;
-
-            // 障害物は必ずコインと異なるレーンに配置
-            let availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
-            const obstacleLane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
-            this.lastObstacleLane = obstacleLane;
-
-            // コインを生成
-            this.spawnCoin(coinLane, targetZ, playerZ);
-            // 障害物を生成
-            this.spawnObstacle(obstacleLane, targetZ, playerZ);
-        }
-        // コインのみ生成
-        else if (shouldSpawnCoin) {
+        if (shouldSpawnCoin) {
+            // まずコインのレーンをランダムに決定
             const coinLane = Math.floor(Math.random() * 3);
             this.currentCoinLane = coinLane;
             this.spawnCoin(coinLane, targetZ, playerZ);
-        }
-        // 障害物のみ生成
-        else if (shouldSpawnObstacle) {
-            const obstacleLane = Math.floor(Math.random() * 3);
-            this.lastObstacleLane = obstacleLane;
-            this.spawnObstacle(obstacleLane, targetZ, playerZ);
+
+            // コインのないレーンから障害物を生成する可能性のあるレーンを取得
+            const availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
+            
+            // 各レーンで15%の確率で障害物を生成
+            availableLanes.forEach(lane => {
+                if (Math.random() < this.obstacleChance) {
+                    this.lastObstacleLane = lane;
+                    this.spawnObstacle(lane, targetZ, playerZ);
+                }
+            });
         }
     }
 
@@ -117,7 +100,6 @@ export class ObstacleManager {
                 this.scene.add(newObstacle);
                 this.obstacles.push(newObstacle);
                 this.lastObstacleZ = playerZ;
-                this.nextObstacleDistance = this.getRandomObstacleDistance();
             },
             null,
             (error) => {
@@ -220,6 +202,5 @@ export class ObstacleManager {
         // 位置をリセット
         this.lastCoinZ = 0;
         this.lastObstacleZ = 0;
-        this.nextObstacleDistance = this.getRandomObstacleDistance();
     }
 }
