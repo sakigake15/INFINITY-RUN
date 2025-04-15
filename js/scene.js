@@ -87,6 +87,28 @@ export class SceneManager {
         this.camera.rotation.x = -Math.PI / 6;
     }
 
+    reset() {
+        // カメラをリセット
+        this.camera.position.set(0, 3, 4);
+        this.camera.rotation.x = -Math.PI / 6;
+
+        // レーンをクリア
+        this.lanes.forEach(lane => {
+            this.scene.remove(lane);
+        });
+        this.lanes = [];
+
+        // 地面をクリア
+        this.grounds.forEach(ground => {
+            this.scene.remove(ground);
+        });
+        this.grounds = [];
+
+        // 初期のレーンと地面を再生成
+        this.setupGround();
+        this.setupLanes();
+    }
+
     setupResizeHandler() {
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
