@@ -4,7 +4,7 @@ export class SceneManager {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = null;
-        this.laneWidth = 2;
+        this.laneWidth = 1.5;
         this.laneLength = 20;
 
         this.setupScene();
@@ -41,24 +41,25 @@ export class SceneManager {
     }
 
     setupLanes() {
-        const laneModels = [
-            'tileBrickB_largeCrackedB.gltf.glb',  // 左レーン
-            'tileBrickB_largeCrackedA.gltf.glb',  // 中央レーン
-            'tileBrickA_large.gltf.glb'           // 右レーン
-        ];
+        const laneModel = 'tileBrickA_large.gltf.glb';
+        const tileLength = 2; // 1つのタイルの長さ
+        const tilesNeeded = Math.ceil(this.laneLength / tileLength); // 必要なタイルの数
 
-        for (let i = 0; i < 3; i++) {
-            this.loader.load(laneModels[i], (gltf) => {
-                const lane = gltf.scene;
-                lane.position.x = (i - 1) * this.laneWidth;
-                lane.position.y = 0;
-                lane.position.z = 0;
-                lane.rotation.y = Math.PI;
-
-                // スケールの調整
-                lane.scale.set(2, 1, this.laneLength);
-
-                this.scene.add(lane);
+        for (let i = 0; i < 2; i++) {
+            this.loader.load(laneModel, (gltf) => {
+                // 各レーンにタイルを敷き詰める
+                for (let j = 0; j < tilesNeeded; j++) {
+                    const lane = gltf.scene.clone();
+                    lane.position.x = (i === 0 ? -1 : 1);
+                    lane.position.y = -1;
+                    lane.position.z = -(j * tileLength);
+                    lane.rotation.y = 0;
+                    
+                    // 横幅を広げて配置
+                    lane.scale.set(0.75, 1, 1);
+                    
+                    this.scene.add(lane);
+                }
             });
         }
     }
