@@ -76,7 +76,7 @@ export class Player {
         
         // プレイヤーを奥に移動
         if (this.player) {
-            this.player.position.z -= 0.1;
+            this.player.position.z -= 0.15;
         }
     }
 

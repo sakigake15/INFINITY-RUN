@@ -6,7 +6,7 @@ export class SceneManager {
         this.renderer = null;
         this.laneWidth = 1.5;
         this.laneLength = 20;
-        this.cameraSpeed = 0.1;
+        this.cameraSpeed = 0.15;
         this.lanes = []; // レーンタイルを管理する配列
         this.tileLength = 2; // 1つのタイルの長さ
         this.grounds = []; // 地面を管理する配列

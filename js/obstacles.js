@@ -17,9 +17,15 @@ export class ObstacleManager {
         
         this.spawnInterval = 300; // 生成間隔（0.3秒）
         this.spawnTimer = null;
-        this.obstacleCountdown = 0; // 障害物生成までのカウントダウン
-        this.coinSpawnDistance = 5; // コインを生成する間隔（マス目単位）
         this.lastCoinZ = 0; // 最後にコインを生成したZ座標
+        this.lastObstacleZ = 0; // 最後に障害物を生成したZ座標
+        this.coinSpawnDistance = 3; // コインを生成する間隔（マス目単位）
+        this.obstacleSpawnDistances = [3, 6, 9]; // 障害物の生成間隔の選択肢
+        this.nextObstacleDistance = this.getRandomObstacleDistance(); // 次の障害物までの距離
+    }
+
+    getRandomObstacleDistance() {
+        return this.obstacleSpawnDistances[Math.floor(Math.random() * this.obstacleSpawnDistances.length)];
     }
 
     startSpawning() {
@@ -41,7 +47,7 @@ export class ObstacleManager {
         // プレイヤーの現在位置を取得
         const playerZ = this.player.getModel().position.z;
 
-        // 5マスごとにコインを生成
+        // 3マスごとにコインを生成
         if (Math.abs(playerZ - this.lastCoinZ) >= this.coinSpawnDistance) {
             const coinLane = Math.floor(Math.random() * 3);
             const coinXPosition = (coinLane - 1) * this.laneWidth;
@@ -68,7 +74,8 @@ export class ObstacleManager {
             );
         }
 
-        if (this.obstacleCountdown === 0) {
+        // 障害物の生成チェック
+        if (Math.abs(playerZ - this.lastObstacleZ) >= this.nextObstacleDistance) {
             // 障害物のレーンをランダムに選択
             const obstacleLane = Math.floor(Math.random() * 3);
             const obstacleXPosition = (obstacleLane - 1) * this.laneWidth;
@@ -86,17 +93,14 @@ export class ObstacleManager {
                     newObstacle.position.set(obstacleXPosition, 0, obstacleZPosition);
                     this.scene.add(newObstacle);
                     this.obstacles.push(newObstacle);
+                    this.lastObstacleZ = playerZ;
+                    this.nextObstacleDistance = this.getRandomObstacleDistance();
                 },
                 null,
                 (error) => {
                     console.error('GLTFLoader error:', error);
                 }
             );
-
-            // 次の障害物までのカウントダウンをセット（0, 1, 2のいずれか）
-            this.obstacleCountdown = Math.floor(Math.random() * 3);
-        } else {
-            this.obstacleCountdown--;
         }
     }
 
@@ -191,7 +195,9 @@ export class ObstacleManager {
         
         // コインの生成を停止
         this.stopSpawning();
-        // 最後のコイン位置をリセット
+        // 位置をリセット
         this.lastCoinZ = 0;
+        this.lastObstacleZ = 0;
+        this.nextObstacleDistance = this.getRandomObstacleDistance();
     }
 }
