@@ -6,6 +6,10 @@ export class SceneManager {
         this.renderer = null;
         this.laneWidth = 1.5;
         this.laneLength = 20;
+        this.cameraSpeed = 0.1;
+        this.lanes = []; // レーンタイルを管理する配列
+        this.tileLength = 2; // 1つのタイルの長さ
+        this.grounds = []; // 地面を管理する配列
 
         this.setupScene();
         this.setupLighting();
@@ -32,36 +36,41 @@ export class SceneManager {
     }
 
     setupGround() {
+        // 初期の地面を生成
+        this.addGroundTile(0);
+    }
+
+    addGroundTile(z) {
         const groundGeometry = new THREE.PlaneGeometry(50, 50);
         const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x228B22 });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.01;
+        ground.position.z = z;
         this.scene.add(ground);
+        this.grounds.push(ground);
     }
 
     setupLanes() {
         const laneModel = 'tileBrickA_large.gltf.glb';
-        const tileLength = 2; // 1つのタイルの長さ
-        const tilesNeeded = Math.ceil(this.laneLength / tileLength); // 必要なタイルの数
+        const tilesNeeded = Math.ceil(this.laneLength / this.tileLength);
 
-        for (let i = 0; i < 2; i++) {
-            this.loader.load(laneModel, (gltf) => {
-                // 各レーンにタイルを敷き詰める
+        this.loader.load(laneModel, (gltf) => {
+            const template = gltf.scene;
+            // 各レーンにタイルを敷き詰める
+            for (let i = 0; i < 2; i++) {
                 for (let j = 0; j < tilesNeeded; j++) {
-                    const lane = gltf.scene.clone();
+                    const lane = template.clone();
                     lane.position.x = (i === 0 ? -1 : 1);
                     lane.position.y = -1;
-                    lane.position.z = -(j * tileLength);
+                    lane.position.z = -(j * this.tileLength);
                     lane.rotation.y = 0;
-                    
-                    // 横幅を広げて配置
                     lane.scale.set(0.75, 1, 1);
-                    
                     this.scene.add(lane);
+                    this.lanes.push(lane);
                 }
-            });
-        }
+            }
+        });
     }
 
     setupRenderer() {
@@ -86,7 +95,73 @@ export class SceneManager {
         });
     }
 
+    addNewLaneTile(x, z) {
+        const laneModel = 'tileBrickA_large.gltf.glb';
+        this.loader.load(laneModel, (gltf) => {
+            const lane = gltf.scene;
+            lane.position.x = x;
+            lane.position.y = -1;
+            lane.position.z = z;
+            lane.rotation.y = 0;
+            lane.scale.set(0.75, 1, 1);
+            this.scene.add(lane);
+            this.lanes.push(lane);
+        });
+    }
+
+    update() {
+        if (this.camera) {
+            // カメラを奥に移動
+            this.camera.position.z -= this.cameraSpeed;
+            // プレイヤーの視点を維持するため、カメラの注視点も移動
+            this.camera.lookAt(0, 0, this.camera.position.z - 4);
+
+            // レーンと地面の管理
+            if (this.lanes.length > 0) {
+                // 1. フレームアウトしたレーンと地面の削除
+                const removeLanes = [];
+                this.lanes.forEach(lane => {
+                    if (lane.position.z > this.camera.position.z + 5) {
+                        removeLanes.push(lane);
+                    }
+                });
+                removeLanes.forEach(lane => {
+                    this.scene.remove(lane);
+                    this.lanes.splice(this.lanes.indexOf(lane), 1);
+                });
+
+                const removeGrounds = [];
+                this.grounds.forEach(ground => {
+                    if (ground.position.z > this.camera.position.z + 25) {
+                        removeGrounds.push(ground);
+                    }
+                });
+                removeGrounds.forEach(ground => {
+                    this.scene.remove(ground);
+                    this.grounds.splice(this.grounds.indexOf(ground), 1);
+                });
+
+                // 2. 新しいレーンと地面の追加
+                const lastLane = this.lanes.reduce((prev, current) => 
+                    (current.position.z < prev.position.z) ? current : prev
+                );
+                if (lastLane && lastLane.position.z > this.camera.position.z - 30) {
+                    this.addNewLaneTile(-1, lastLane.position.z - this.tileLength);
+                    this.addNewLaneTile(1, lastLane.position.z - this.tileLength);
+                }
+
+                const lastGround = this.grounds.reduce((prev, current) => 
+                    (current.position.z < prev.position.z) ? current : prev
+                );
+                if (lastGround && lastGround.position.z > this.camera.position.z - 50) {
+                    this.addGroundTile(lastGround.position.z - 50);
+                }
+            }
+        }
+    }
+
     render() {
+        this.update();
         this.renderer.render(this.scene, this.camera);
     }
 

@@ -129,9 +129,9 @@ export class ObstacleManager {
 
         // 障害物の更新
         for (const obstacle of this.obstacles) {
-            obstacle.position.z += this.gameState.obstacleSpeed;
+            // 障害物は固定位置
             
-            if (obstacle.position.z > 2) {
+            if (obstacle.position.z > this.player.getModel().position.z + 5) {
                 this.gameState.addScore(100);
                 removeObstacles.push(obstacle);
             }
@@ -139,7 +139,7 @@ export class ObstacleManager {
 
         // コインの更新
         for (const coin of this.coins) {
-            coin.position.z += this.gameState.obstacleSpeed;
+            // コインは固定位置
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
@@ -147,7 +147,7 @@ export class ObstacleManager {
                 removeCoins.push(coin);
             }
             
-            if (coin.position.z > 2) {
+            if (coin.position.z > this.player.getModel().position.z + 5) {
                 removeCoins.push(coin);
             }
         }
