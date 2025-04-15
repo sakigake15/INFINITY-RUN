@@ -22,6 +22,8 @@ export class ObstacleManager {
         this.coinSpawnDistance = 3; // コインを生成する間隔（マス目単位）
         this.obstacleSpawnDistances = [3, 6, 9]; // 障害物の生成間隔の選択肢
         this.nextObstacleDistance = this.getRandomObstacleDistance(); // 次の障害物までの距離
+        this.currentCoinLane = -1;
+        this.lastObstacleLane = -1;
     }
 
     getRandomObstacleDistance() {
@@ -44,64 +46,84 @@ export class ObstacleManager {
     spawnObjects() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
-        // プレイヤーの現在位置を取得
         const playerZ = this.player.getModel().position.z;
+        const shouldSpawnCoin = Math.abs(playerZ - this.lastCoinZ) >= this.coinSpawnDistance;
+        const shouldSpawnObstacle = Math.abs(playerZ - this.lastObstacleZ) >= this.nextObstacleDistance;
+        const targetZ = playerZ - 15; // 生成位置は常にプレイヤーの15マス先
 
-        // 3マスごとにコインを生成
-        if (Math.abs(playerZ - this.lastCoinZ) >= this.coinSpawnDistance) {
+        // 両方生成する場合
+        if (shouldSpawnCoin && shouldSpawnObstacle) {
+            // まずコインのレーンを決定
             const coinLane = Math.floor(Math.random() * 3);
-            const coinXPosition = (coinLane - 1) * this.laneWidth;
-            const coinZPosition = playerZ - 15; // プレイヤーの15マス先に生成
+            this.currentCoinLane = coinLane;
 
-            // コインの生成
-            this.loader.load(
-                'Coin_A.gltf',
-                (gltf) => {
-                    if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
-                    
-                    const coin = gltf.scene;
-                    coin.scale.set(0.5, 0.5, 0.5);
-                    const newCoin = coin.clone();
-                    newCoin.position.set(coinXPosition, 0.5, coinZPosition);
-                    this.scene.add(newCoin);
-                    this.coins.push(newCoin);
-                    this.lastCoinZ = playerZ;
-                },
-                null,
-                (error) => {
-                    console.error('GLTFLoader error:', error);
-                }
-            );
+            // 障害物は必ずコインと異なるレーンに配置
+            let availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
+            const obstacleLane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+            this.lastObstacleLane = obstacleLane;
+
+            // コインを生成
+            this.spawnCoin(coinLane, targetZ, playerZ);
+            // 障害物を生成
+            this.spawnObstacle(obstacleLane, targetZ, playerZ);
         }
-
-        // 障害物の生成チェック
-        if (Math.abs(playerZ - this.lastObstacleZ) >= this.nextObstacleDistance) {
-            // 障害物のレーンをランダムに選択
+        // コインのみ生成
+        else if (shouldSpawnCoin) {
+            const coinLane = Math.floor(Math.random() * 3);
+            this.currentCoinLane = coinLane;
+            this.spawnCoin(coinLane, targetZ, playerZ);
+        }
+        // 障害物のみ生成
+        else if (shouldSpawnObstacle) {
             const obstacleLane = Math.floor(Math.random() * 3);
-            const obstacleXPosition = (obstacleLane - 1) * this.laneWidth;
-            const obstacleZPosition = playerZ - 15; // プレイヤーの15マス先に生成
-
-            // 障害物の生成
-            const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
-            this.loader.load(
-                randomModel.path,
-                (gltf) => {
-                    if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
-                    
-                    const newObstacle = gltf.scene;
-                    newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
-                    newObstacle.position.set(obstacleXPosition, 0, obstacleZPosition);
-                    this.scene.add(newObstacle);
-                    this.obstacles.push(newObstacle);
-                    this.lastObstacleZ = playerZ;
-                    this.nextObstacleDistance = this.getRandomObstacleDistance();
-                },
-                null,
-                (error) => {
-                    console.error('GLTFLoader error:', error);
-                }
-            );
+            this.lastObstacleLane = obstacleLane;
+            this.spawnObstacle(obstacleLane, targetZ, playerZ);
         }
+    }
+
+    spawnCoin(lane, targetZ, playerZ) {
+        const xPosition = (lane - 1) * this.laneWidth;
+        this.loader.load(
+            'Coin_A.gltf',
+            (gltf) => {
+                if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
+                
+                const coin = gltf.scene;
+                coin.scale.set(0.5, 0.5, 0.5);
+                const newCoin = coin.clone();
+                newCoin.position.set(xPosition, 0.5, targetZ);
+                this.scene.add(newCoin);
+                this.coins.push(newCoin);
+                this.lastCoinZ = playerZ;
+            },
+            null,
+            (error) => {
+                console.error('GLTFLoader error:', error);
+            }
+        );
+    }
+
+    spawnObstacle(lane, targetZ, playerZ) {
+        const xPosition = (lane - 1) * this.laneWidth;
+        const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
+        this.loader.load(
+            randomModel.path,
+            (gltf) => {
+                if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
+                
+                const newObstacle = gltf.scene;
+                newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
+                newObstacle.position.set(xPosition, 0, targetZ);
+                this.scene.add(newObstacle);
+                this.obstacles.push(newObstacle);
+                this.lastObstacleZ = playerZ;
+                this.nextObstacleDistance = this.getRandomObstacleDistance();
+            },
+            null,
+            (error) => {
+                console.error('GLTFLoader error:', error);
+            }
+        );
     }
 
     checkCollision() {
