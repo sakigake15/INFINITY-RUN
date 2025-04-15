@@ -36,8 +36,9 @@ export class ObstacleManager {
     spawnObjects() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
-        const randomLane = Math.floor(Math.random() * 3);
-        const xPosition = (randomLane - 1) * this.laneWidth;
+        // コインのレーンを決定
+        const coinLane = Math.floor(Math.random() * 3);
+        const coinXPosition = (coinLane - 1) * this.laneWidth;
 
         // コインの生成（毎回）
         this.loader.load(
@@ -48,7 +49,7 @@ export class ObstacleManager {
                 const coin = gltf.scene;
                 coin.scale.set(0.5, 0.5, 0.5);
                 const newCoin = coin.clone();
-                newCoin.position.set(xPosition, 0.5, -15);
+                newCoin.position.set(coinXPosition, 0.5, -15);
                 this.scene.add(newCoin);
                 this.coins.push(newCoin);
             },
@@ -59,6 +60,14 @@ export class ObstacleManager {
         );
 
         if (this.obstacleCountdown === 0) {
+            // コインとは異なるレーンを選択
+            let obstacleLane;
+            do {
+                obstacleLane = Math.floor(Math.random() * 3);
+            } while (obstacleLane === coinLane);
+            
+            const obstacleXPosition = (obstacleLane - 1) * this.laneWidth;
+
             // 障害物の生成
             const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
             this.loader.load(
@@ -68,7 +77,7 @@ export class ObstacleManager {
                     
                     const newObstacle = gltf.scene;
                     newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
-                    newObstacle.position.set(xPosition, 0, -15);
+                    newObstacle.position.set(obstacleXPosition, 0, -15);
                     this.scene.add(newObstacle);
                     this.obstacles.push(newObstacle);
                 },

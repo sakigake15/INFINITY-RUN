@@ -1,11 +1,12 @@
 export class SceneManager {
     constructor() {
+        this.loader = new THREE.GLTFLoader();
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = null;
         this.laneWidth = 2;
         this.laneLength = 20;
-        
+
         this.setupScene();
         this.setupLighting();
         this.setupGround();
@@ -40,20 +41,25 @@ export class SceneManager {
     }
 
     setupLanes() {
-        const laneGeometry = new THREE.PlaneGeometry(this.laneWidth, this.laneLength);
-        const laneMaterials = [
-            new THREE.MeshPhongMaterial({ color: 0x66ff66 }), // 左レーン: 緑
-            new THREE.MeshPhongMaterial({ color: 0x6666ff }), // 中央レーン: 青
-            new THREE.MeshPhongMaterial({ color: 0xff6666 }), // 右レーン: 赤
+        const laneModels = [
+            'tileBrickB_largeCrackedB.gltf.glb',  // 左レーン
+            'tileBrickB_largeCrackedA.gltf.glb',  // 中央レーン
+            'tileBrickA_large.gltf.glb'           // 右レーン
         ];
 
         for (let i = 0; i < 3; i++) {
-            const lane = new THREE.Mesh(laneGeometry, laneMaterials[i]);
-            lane.position.x = (i - 1) * this.laneWidth;
-            lane.position.y = 0;
-            lane.position.z = -this.laneLength / 2;
-            lane.rotation.x = -Math.PI / 2;
-            this.scene.add(lane);
+            this.loader.load(laneModels[i], (gltf) => {
+                const lane = gltf.scene;
+                lane.position.x = (i - 1) * this.laneWidth;
+                lane.position.y = 0;
+                lane.position.z = 0;
+                lane.rotation.y = Math.PI;
+
+                // スケールの調整
+                lane.scale.set(2, 1, this.laneLength);
+
+                this.scene.add(lane);
+            });
         }
     }
 
