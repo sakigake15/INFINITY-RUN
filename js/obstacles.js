@@ -6,7 +6,7 @@ export class ObstacleManager {
         this.laneWidth = laneWidth;
         this.obstacles = [];
         this.coins = [];
-        this.potionChance = 0.10; // 10%の確率でポーションに変化
+        this.potionChance = 0.01; // 1%の確率でポーションに変化
         this.isFeverTime = false; // フィーバータイムの状態
         this.feverTimeTimer = null; // フィーバータイムのタイマー
         this.loader = new THREE.GLTFLoader();
