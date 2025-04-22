@@ -6,6 +6,9 @@ export class ObstacleManager {
         this.laneWidth = laneWidth;
         this.obstacles = [];
         this.coins = [];
+        this.potionChance = 0.10; // 10%の確率でポーションに変化
+        this.isFeverTime = false; // フィーバータイムの状態
+        this.feverTimeTimer = null; // フィーバータイムのタイマー
         this.loader = new THREE.GLTFLoader();
         
         // 障害物のモデルパスを配列で保持
@@ -38,6 +41,17 @@ export class ObstacleManager {
         }
     }
 
+    startFeverTime() {
+        this.isFeverTime = true;
+        if (this.feverTimeTimer) {
+            clearTimeout(this.feverTimeTimer);
+        }
+        this.feverTimeTimer = setTimeout(() => {
+            this.isFeverTime = false;
+            this.feverTimeTimer = null;
+        }, 5000); // 5秒後に終了
+    }
+
     spawnObjects() {
         if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
 
@@ -46,35 +60,46 @@ export class ObstacleManager {
         const targetZ = playerZ - 15; // 生成位置は常にプレイヤーの15マス先
 
         if (shouldSpawnCoin) {
-            // まずコインのレーンをランダムに決定
-            const coinLane = Math.floor(Math.random() * 3);
-            this.currentCoinLane = coinLane;
-            this.spawnCoin(coinLane, targetZ, playerZ);
+            if (this.isFeverTime) {
+                // フィーバータイム中は全レーンにコインを生成
+                [0, 1, 2].forEach(lane => {
+                    this.spawnCoin(lane, targetZ, playerZ);
+                });
+            } else {
+                // 通常時は1レーンのみにコインを生成
+                const coinLane = Math.floor(Math.random() * 3);
+                this.currentCoinLane = coinLane;
+                this.spawnCoin(coinLane, targetZ, playerZ);
 
-            // コインのないレーンから障害物を生成する可能性のあるレーンを取得
-            const availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
-            
-            // 各レーンで15%の確率で障害物を生成
-            availableLanes.forEach(lane => {
-                if (Math.random() < this.obstacleChance) {
-                    this.lastObstacleLane = lane;
-                    this.spawnObstacle(lane, targetZ, playerZ);
-                }
-            });
+                // コインのないレーンから障害物を生成する可能性のあるレーンを取得
+                const availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
+                
+                // 各レーンで15%の確率で障害物を生成
+                availableLanes.forEach(lane => {
+                    if (Math.random() < this.obstacleChance) {
+                        this.lastObstacleLane = lane;
+                        this.spawnObstacle(lane, targetZ, playerZ);
+                    }
+                });
+            }
         }
     }
 
     spawnCoin(lane, targetZ, playerZ) {
         const xPosition = (lane - 1) * this.laneWidth;
+        const isPotion = Math.random() < this.potionChance;
+        const modelPath = isPotion ? 'bottle_A_green.gltf' : 'Coin_A.gltf';
         this.loader.load(
-            'Coin_A.gltf',
+            modelPath,
             (gltf) => {
                 if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
                 
                 const coin = gltf.scene;
-                coin.scale.set(0.5, 0.5, 0.5);
+                const scale = isPotion ? 1.0 : 0.5;  // ポーションは元のサイズのまま
+                coin.scale.set(scale, scale, scale);
                 const newCoin = coin.clone();
-                newCoin.position.set(xPosition, 0.5, targetZ);
+                newCoin.position.set(xPosition, isPotion ? 0 : 0.5, targetZ);  // ポーションは地面に、コインは浮かせる
+                newCoin.isPotion = isPotion;  // ポーションかどうかを記録
                 this.scene.add(newCoin);
                 this.coins.push(newCoin);
                 this.lastCoinZ = playerZ;
@@ -156,7 +181,10 @@ export class ObstacleManager {
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
-                this.gameState.addMoney(10);
+                this.gameState.addMoney(coin.isPotion ? 50 : 10);  // ポーションの場合は50ポイント
+                if (coin.isPotion) {
+                    this.startFeverTime();
+                }
                 removeCoins.push(coin);
             }
             
@@ -199,6 +227,12 @@ export class ObstacleManager {
         
         // コインの生成を停止
         this.stopSpawning();
+        // フィーバータイムをリセット
+        this.isFeverTime = false;
+        if (this.feverTimeTimer) {
+            clearTimeout(this.feverTimeTimer);
+            this.feverTimeTimer = null;
+        }
         // 位置をリセット
         this.lastCoinZ = 0;
         this.lastObstacleZ = 0;
