@@ -53,6 +53,8 @@ class Game {
         this.gameState.resetGame();
         this.player.resetPosition();
         this.obstacleManager.reset();
+        this.obstacleManager.startSpawning(); // リセット後に障害物の生成を再開
+        this.sceneManager.reset(); // シーン全体をリセット（カメラ、レーン、地面）
     }
 
     animate() {

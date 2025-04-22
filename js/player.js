@@ -73,6 +73,11 @@ export class Player {
         if (this.mixer) {
             this.mixer.update(this.clock.getDelta());
         }
+        
+        // プレイヤーを奥に移動
+        if (this.player) {
+            this.player.position.z -= 0.15;
+        }
     }
 
     startRunning() {
