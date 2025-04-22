@@ -1,8 +1,9 @@
 export class SceneManager {
-    constructor() {
+    constructor(gameState) {
         this.loader = new THREE.GLTFLoader();
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.gameState = gameState;
         this.renderer = null;
         this.laneWidth = 1.5;
         this.laneLength = 20;
@@ -132,7 +133,7 @@ export class SceneManager {
     }
 
     update() {
-        if (this.camera) {
+        if (this.camera && this.gameState.isGameStarted && !this.gameState.isGameOver) {
             // カメラを奥に移動
             this.camera.position.z -= this.cameraSpeed;
             // プレイヤーの視点を維持するため、カメラの注視点も移動

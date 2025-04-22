@@ -6,8 +6,8 @@ import { InputHandler } from './input.js';
 
 class Game {
     constructor() {
-        this.sceneManager = new SceneManager();
         this.gameState = new GameState();
+        this.sceneManager = new SceneManager(this.gameState);
         this.player = new Player(this.sceneManager.getScene(), 'Rogue.glb');
         this.obstacleManager = new ObstacleManager(
             this.sceneManager.getScene(),
@@ -60,12 +60,11 @@ class Game {
     animate() {
         requestAnimationFrame(() => this.animate());
 
-        if (!this.gameState.isGameOver && this.gameState.isGameStarted) {
+        if (this.gameState.isGameStarted && !this.gameState.isGameOver) {
             this.inputHandler.updatePlayerPosition();
             this.obstacleManager.update();
+            this.player.update();
         }
-
-        this.player.update();
         this.sceneManager.render();
     }
 }
