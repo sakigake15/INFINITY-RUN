@@ -170,7 +170,6 @@ export class ObstacleManager {
         for (const obstacle of this.obstacles) {
             // 障害物は固定位置
             if (obstacle.position.z > this.player.getModel().position.z + 5) {
-                this.gameState.addScore(100);
                 removeObstacles.push(obstacle);
             }
         }
@@ -181,7 +180,7 @@ export class ObstacleManager {
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
-                this.gameState.addMoney(coin.isPotion ? 50 : 10);  // ポーションの場合は50ポイント
+                this.gameState.addScore(coin.isPotion ? 50 : 10);  // ポーションの場合は50ポイント
                 if (coin.isPotion) {
                     this.startFeverTime();
                 }
