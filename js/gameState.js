@@ -20,10 +20,6 @@ export class GameState {
         document.getElementById('scoreDisplay').style.animation = 'fadeIn 0.5s ease forwards';
     }
 
-    backToTitle() {
-        this.resetGame();
-    }
-
     updateHighScore() {
         if (this.score > this.highScore) {
             this.highScore = this.score;
@@ -48,12 +44,10 @@ export class GameState {
         this.isGameStarted = false;
         this.obstacleSpeed = 0.2;
         this.money = 0;
-        document.getElementById('currentMoney').textContent = '0';
         this.initScore();
 
-        // ゲームオーバー画面を非表示にしてタイトル画面を表示
+        // ゲームオーバー画面を非表示
         document.getElementById('gameOverScreen').classList.add('hidden');
-        document.getElementById('titleScreen').classList.remove('hidden');
     }
 
     handleGameOver(player, runningAction) {
@@ -94,7 +88,10 @@ export class GameState {
 
     addMoney(amount) {
         this.money += amount;
-        document.getElementById('currentMoney').textContent = this.money;
+        const moneyElement = document.getElementById('currentMoney');
+        if (moneyElement) {
+            moneyElement.textContent = this.money;
+        }
     }
 
     // 世界切り替え
