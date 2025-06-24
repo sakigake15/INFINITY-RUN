@@ -6,6 +6,7 @@ export class GameState {
         this.money = 0;
         this.highScore = localStorage.getItem('highScore') || 0;
         this.obstacleSpeed = 0.2;
+        this.isHellWorld = false; // 地獄世界のフラグ
         
         // 初期表示
         this.updateHighScoreDisplay();
@@ -94,5 +95,15 @@ export class GameState {
     addMoney(amount) {
         this.money += amount;
         document.getElementById('currentMoney').textContent = this.money;
+    }
+
+    // 世界切り替え
+    toggleWorld() {
+        this.isHellWorld = !this.isHellWorld;
+    }
+
+    // 地獄世界かどうかを取得
+    getIsHellWorld() {
+        return this.isHellWorld;
     }
 }

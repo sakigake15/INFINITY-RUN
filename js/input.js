@@ -1,7 +1,8 @@
 export class InputHandler {
-    constructor(gameState, laneWidth) {
+    constructor(gameState, laneWidth, sceneManager) {
         this.gameState = gameState;
         this.laneWidth = laneWidth;
+        this.sceneManager = sceneManager;
         this.currentLane = 1; // 0: 左, 1: 中央, 2: 右
         this.targetX = 0; // 目標のX座標
         this.touchStartX = 0; // タッチ開始位置
@@ -26,6 +27,13 @@ export class InputHandler {
 
     setupKeyboardHandlers() {
         window.addEventListener('keydown', (event) => {
+            // aキーの世界切り替えはゲーム開始前でも可能
+            if (event.key === 'a' || event.key === 'A') {
+                this.gameState.toggleWorld();
+                this.sceneManager.toggleWorld();
+                return;
+            }
+
             if (!this.player || !this.gameState.isGameStarted || this.gameState.isGameOver) return;
 
             switch(event.key) {

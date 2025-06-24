@@ -17,7 +17,8 @@ class Game {
         );
         this.inputHandler = new InputHandler(
             this.gameState,
-            this.sceneManager.getLaneWidth()
+            this.sceneManager.getLaneWidth(),
+            this.sceneManager
         );
 
         // プレイヤーが読み込まれたらInputHandlerに設定

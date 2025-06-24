@@ -74,9 +74,13 @@ export class ObstacleManager {
                 // コインのないレーンから障害物を生成する可能性のあるレーンを取得
                 const availableLanes = [0, 1, 2].filter(lane => lane !== coinLane);
                 
-                // 各レーンで15%の確率で障害物を生成
+                // 地獄世界では障害物生成確率を120%に増加（15% × 1.2 = 18%）
+                const currentObstacleChance = this.gameState.getIsHellWorld() ? 
+                    this.obstacleChance * 1.2 : this.obstacleChance;
+                
+                // 各レーンで障害物を生成
                 availableLanes.forEach(lane => {
-                    if (Math.random() < this.obstacleChance) {
+                    if (Math.random() < currentObstacleChance) {
                         this.lastObstacleLane = lane;
                         this.spawnObstacle(lane, targetZ, playerZ);
                     }

@@ -11,6 +11,10 @@ export class SceneManager {
         this.lanes = []; // レーンタイルを管理する配列
         this.tileLength = 2; // 1つのタイルの長さ
         this.grounds = []; // 地面を管理する配列
+        
+        // 照明オブジェクトを保持
+        this.ambientLight = null;
+        this.directionalLight = null;
 
         this.setupScene();
         this.setupLighting();
@@ -27,13 +31,13 @@ export class SceneManager {
 
     setupLighting() {
         // 環境光
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        this.scene.add(ambientLight);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        this.scene.add(this.ambientLight);
 
         // 指向光
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(5, 5, 5);
-        this.scene.add(directionalLight);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.directionalLight.position.set(5, 5, 5);
+        this.scene.add(this.directionalLight);
     }
 
     setupGround() {
@@ -136,8 +140,12 @@ export class SceneManager {
         if (this.camera && this.gameState.isGameStarted && !this.gameState.isGameOver) {
             // カメラを奥に移動
             this.camera.position.z -= this.cameraSpeed;
-            // プレイヤーの視点を維持するため、カメラの注視点も移動
-            this.camera.lookAt(0, 0, this.camera.position.z - 4);
+            
+            // 地獄世界でない場合のみlookAtを実行（地獄世界では回転を維持）
+            if (!this.gameState.getIsHellWorld()) {
+                // プレイヤーの視点を維持するため、カメラの注視点も移動
+                this.camera.lookAt(0, 0, this.camera.position.z - 4);
+            }
 
             // レーンと地面の管理
             if (this.lanes.length > 0) {
@@ -202,5 +210,44 @@ export class SceneManager {
 
     getLaneWidth() {
         return this.laneWidth;
+    }
+
+    // 地獄世界への切り替え
+    toggleWorld() {
+        if (this.gameState.getIsHellWorld()) {
+            // 地獄世界に切り替え
+            this.switchToHellWorld();
+        } else {
+            // 地上世界に切り替え
+            this.switchToEarthWorld();
+        }
+    }
+
+    switchToHellWorld() {
+        // 背景を暗い赤に変更
+        this.scene.background = new THREE.Color(0x400000); // 暗い赤
+        
+        // 照明を赤く変更（透明度60%）
+        this.ambientLight.color.setHex(0xff4444);
+        this.ambientLight.intensity = 0.3; // 60%の透明度（0.5 * 0.6 = 0.3）
+        this.directionalLight.color.setHex(0xff0000);
+        this.directionalLight.intensity = 0.48; // 60%の透明度（0.8 * 0.6 = 0.48）
+        
+        // カメラをz軸180度回転
+        this.camera.rotation.z = Math.PI;
+    }
+
+    switchToEarthWorld() {
+        // 背景を空色に戻す
+        this.scene.background = new THREE.Color(0x87CEEB);
+        
+        // 照明を白に戻す（元の強度に戻す）
+        this.ambientLight.color.setHex(0xffffff);
+        this.ambientLight.intensity = 0.5; // 元の強度
+        this.directionalLight.color.setHex(0xffffff);
+        this.directionalLight.intensity = 0.8; // 元の強度
+        
+        // カメラの回転をリセット
+        this.camera.rotation.z = 0;
     }
 }
