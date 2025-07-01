@@ -236,11 +236,11 @@ export class ObstacleManager {
                         this.startFeverTime();
                         break;
                     case 'pumpkin':
+                    case 'candy':
                         this.gameState.addScore(10);
                         this.gameState.toggleWorld();
                         this.sceneManager.toggleWorld();
                         break;
-                    case 'candy':
                     case 'coin':
                     default:
                         this.gameState.addScore(10);
