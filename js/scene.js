@@ -227,11 +227,11 @@ export class SceneManager {
         // 背景を暗い赤に変更
         this.scene.background = new THREE.Color(0x400000); // 暗い赤
         
-        // 照明を赤く変更（透明度60%）
+        // 照明を赤く変更（透明度70%）
         this.ambientLight.color.setHex(0xff4444);
-        this.ambientLight.intensity = 0.3; // 60%の透明度（0.5 * 0.6 = 0.3）
+        this.ambientLight.intensity = 0.35; // 70%の透明度（0.5 * 0.7 = 0.35）
         this.directionalLight.color.setHex(0xff0000);
-        this.directionalLight.intensity = 0.48; // 60%の透明度（0.8 * 0.6 = 0.48）
+        this.directionalLight.intensity = 0.56; // 70%の透明度（0.8 * 0.7 = 0.56）
         
         // カメラをz軸180度回転
         this.camera.rotation.z = Math.PI;

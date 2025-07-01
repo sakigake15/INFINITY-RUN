@@ -7,6 +7,8 @@ export class ObstacleManager {
         this.obstacles = [];
         this.coins = [];
         this.potionChance = 0.01; // 1%の確率でポーションに変化
+        this.pumpkinChance = 0.10; // 10%の確率でかぼちゃに変化
+        this.candyChance = 0.10; // 10%の確率でキャンディーに変化
         this.isFeverTime = false; // フィーバータイムの状態
         this.feverTimeTimer = null; // フィーバータイムのタイマー
         this.loader = new THREE.GLTFLoader();
@@ -16,6 +18,13 @@ export class ObstacleManager {
             {path: 'barrel_small.gltf', scale: 1.0},
             {path: 'detail_rocks_small.gltf.glb', scale: 2.0},
             {path: 'detail_treeC.gltf.glb', scale: 2.0}
+        ];
+
+        // 地獄世界の障害物モデルパス
+        this.hellObstacleModels = [
+            {path: 'candleBundle.gltf.glb', scale: 1.5},
+            {path: 'gravestone.gltf.glb', scale: 1.0},
+            {path: 'cauldron.gltf.glb', scale: 1.2}
         ];
         
         this.spawnInterval = 300; // 生成間隔（0.3秒）
@@ -91,19 +100,51 @@ export class ObstacleManager {
 
     spawnCoin(lane, targetZ, playerZ) {
         const xPosition = (lane - 1) * this.laneWidth;
+        let modelPath = 'Coin_A.gltf';
+        let scale = 0.5;
+        let yPosition = 0.5;
+        let itemType = 'coin';
+
+        // 地獄世界ではキャンディー、地上世界ではかぼちゃを出現
+        if (this.gameState.getIsHellWorld()) {
+            const candyChance = Math.random() < this.candyChance;
+            if (candyChance) {
+                // 地獄世界：キャンディー
+                modelPath = 'lollipopB.gltf.glb';
+                scale = 1.2;
+                yPosition = 0;
+                itemType = 'candy';
+            }
+        } else {
+            const pumpkinChance = Math.random() < this.pumpkinChance;
+            if (pumpkinChance) {
+                // 地上世界：かぼちゃ
+                modelPath = 'pumpkinLarge.gltf.glb';
+                scale = 1.2;
+                yPosition = 0.5;
+                itemType = 'pumpkin';
+            }
+        }
+
+        // ポーションの処理（既存の確率で別途判定）
         const isPotion = Math.random() < this.potionChance;
-        const modelPath = isPotion ? 'bottle_A_green.gltf' : 'Coin_A.gltf';
+        if (isPotion) {
+            modelPath = 'bottle_A_green.gltf';
+            scale = 1.0;
+            yPosition = 0;
+            itemType = 'potion';
+        }
+
         this.loader.load(
             modelPath,
             (gltf) => {
                 if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
                 
                 const coin = gltf.scene;
-                const scale = isPotion ? 1.0 : 0.5;  // ポーションは元のサイズのまま
                 coin.scale.set(scale, scale, scale);
                 const newCoin = coin.clone();
-                newCoin.position.set(xPosition, isPotion ? 0 : 0.5, targetZ);  // ポーションは地面に、コインは浮かせる
-                newCoin.isPotion = isPotion;  // ポーションかどうかを記録
+                newCoin.position.set(xPosition, yPosition, targetZ);
+                newCoin.itemType = itemType;  // アイテムタイプを記録
                 this.scene.add(newCoin);
                 this.coins.push(newCoin);
                 this.lastCoinZ = playerZ;
@@ -117,7 +158,10 @@ export class ObstacleManager {
 
     spawnObstacle(lane, targetZ, playerZ) {
         const xPosition = (lane - 1) * this.laneWidth;
-        const randomModel = this.obstacleModels[Math.floor(Math.random() * this.obstacleModels.length)];
+        // 地獄世界かどうかで使用する障害物配列を切り替え
+        const modelArray = this.gameState.getIsHellWorld() ? 
+            this.hellObstacleModels : this.obstacleModels;
+        const randomModel = modelArray[Math.floor(Math.random() * modelArray.length)];
         this.loader.load(
             randomModel.path,
             (gltf) => {
@@ -184,9 +228,18 @@ export class ObstacleManager {
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
-                this.gameState.addScore(coin.isPotion ? 50 : 10);  // ポーションの場合は50ポイント
-                if (coin.isPotion) {
-                    this.startFeverTime();
+                // アイテムタイプに応じてスコアと効果を適用
+                switch (coin.itemType) {
+                    case 'potion':
+                        this.gameState.addScore(50);
+                        this.startFeverTime();
+                        break;
+                    case 'pumpkin':
+                    case 'candy':
+                    case 'coin':
+                    default:
+                        this.gameState.addScore(10);
+                        break;
                 }
                 removeCoins.push(coin);
             }
