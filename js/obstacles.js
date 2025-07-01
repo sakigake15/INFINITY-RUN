@@ -1,9 +1,10 @@
 export class ObstacleManager {
-    constructor(scene, gameState, player, laneWidth) {
+    constructor(scene, gameState, player, laneWidth, sceneManager) {
         this.scene = scene;
         this.gameState = gameState;
         this.player = player;
         this.laneWidth = laneWidth;
+        this.sceneManager = sceneManager;
         this.obstacles = [];
         this.coins = [];
         this.potionChance = 0.01; // 1%の確率でポーションに変化
@@ -235,6 +236,10 @@ export class ObstacleManager {
                         this.startFeverTime();
                         break;
                     case 'pumpkin':
+                        this.gameState.addScore(10);
+                        this.gameState.toggleWorld();
+                        this.sceneManager.toggleWorld();
+                        break;
                     case 'candy':
                     case 'coin':
                     default:

@@ -13,7 +13,8 @@ class Game {
             this.sceneManager.getScene(),
             this.gameState,
             this.player,
-            this.sceneManager.getLaneWidth()
+            this.sceneManager.getLaneWidth(),
+            this.sceneManager
         );
         this.inputHandler = new InputHandler(
             this.gameState,
