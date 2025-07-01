@@ -48,7 +48,10 @@ class Game {
     }
 
     resetGame() {
-        this.gameState.resetGame();
+        const worldChanged = this.gameState.resetGame();
+        if (worldChanged) {
+            this.sceneManager.switchToEarthWorld(); // 地上世界に強制的に切り替え
+        }
         this.player.resetPosition();
         this.obstacleManager.reset();
         this.sceneManager.reset(); // シーン全体をリセット（カメラ、レーン、地面）

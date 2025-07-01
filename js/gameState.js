@@ -48,6 +48,14 @@ export class GameState {
 
         // ゲームオーバー画面を非表示
         document.getElementById('gameOverScreen').classList.add('hidden');
+
+        // 地獄世界の場合は地上世界に戻す
+        if (this.isHellWorld) {
+            this.isHellWorld = false;
+            return true; // 世界が切り替わったことを通知
+        }
+        
+        return false; // 世界は切り替わっていない
     }
 
     handleGameOver(player, runningAction) {
