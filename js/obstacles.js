@@ -18,6 +18,12 @@ export class ObstacleManager {
         // 音声ファイルを読み込み
         this.coinSound = new Audio('coin1.mp3');
         this.coinSound.volume = 0.5; // 音量を調整
+        this.coinSound2 = new Audio('coin2.mp3');
+        this.coinSound2.volume = 0.5; // 音量を調整
+        this.deathSound = new Audio('death.mp3');
+        this.deathSound.volume = 0.7; // 音量を調整
+        this.changeSound = new Audio('change.mp3');
+        this.changeSound.volume = 0.6; // 音量を調整
         
         // 障害物のモデルパスを配列で保持
         this.obstacleModels = [
@@ -243,6 +249,11 @@ export class ObstacleManager {
                     case 'pumpkin':
                     case 'candy':
                         this.gameState.addScore(10);
+                        // 世界切り替え音を再生
+                        this.changeSound.currentTime = 0;
+                        this.changeSound.play().catch(error => {
+                            console.log('世界切り替え音声再生エラー:', error);
+                        });
                         this.gameState.toggleWorld();
                         this.sceneManager.toggleWorld();
                         // 世界切り替え時に既存の障害物のテクスチャを更新
@@ -258,11 +269,18 @@ export class ObstacleManager {
                         const coinScore = this.gameState.getIsHellWorld() ? 50 : 10;
                         this.gameState.addScore(coinScore);
                         
-                        // 地上世界でコインを取得した時のみ音声を再生
-                        if (!this.gameState.getIsHellWorld()) {
-                            this.coinSound.currentTime = 0; // 音声を最初から再生
+                        // 世界に応じてコイン取得音を再生
+                        if (this.gameState.getIsHellWorld()) {
+                            // 地獄世界ではcoin2.mp3を再生
+                            this.coinSound2.currentTime = 0;
+                            this.coinSound2.play().catch(error => {
+                                console.log('地獄コイン音声再生エラー:', error);
+                            });
+                        } else {
+                            // 地上世界ではcoin1.mp3を再生
+                            this.coinSound.currentTime = 0;
                             this.coinSound.play().catch(error => {
-                                console.log('音声再生エラー:', error);
+                                console.log('地上コイン音声再生エラー:', error);
                             });
                         }
                         break;
@@ -288,6 +306,12 @@ export class ObstacleManager {
 
         // 衝突判定
         if (this.checkCollision()) {
+            // 死亡音を再生
+            this.deathSound.currentTime = 0;
+            this.deathSound.play().catch(error => {
+                console.log('死亡音声再生エラー:', error);
+            });
+            
             this.gameState.handleGameOver(
                 this.player.getModel(),
                 this.player.getRunningAction(),
