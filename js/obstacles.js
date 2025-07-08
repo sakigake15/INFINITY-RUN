@@ -240,6 +240,8 @@ export class ObstacleManager {
                         this.gameState.addScore(10);
                         this.gameState.toggleWorld();
                         this.sceneManager.toggleWorld();
+                        // 世界切り替え時に既存の障害物のテクスチャを更新
+                        this.updateObstacleTextures();
                         break;
                     case 'coin':
                     default:
@@ -274,6 +276,46 @@ export class ObstacleManager {
                 this.player.getRunningAction()
             );
         }
+    }
+
+    // 世界切り替え時に既存の障害物のテクスチャを変更
+    updateObstacleTextures() {
+        // 現在の世界に応じたモデル配列を取得
+        const modelArray = this.gameState.getIsHellWorld() ? 
+            this.hellObstacleModels : this.obstacleModels;
+        
+        // 既存の障害物をそれぞれ新しいモデルに置き換え
+        const obstaclesToReplace = [...this.obstacles]; // 配列をコピー
+        
+        obstaclesToReplace.forEach((obstacle, index) => {
+            const position = obstacle.position.clone();
+            const randomModel = modelArray[Math.floor(Math.random() * modelArray.length)];
+            
+            // 古い障害物を削除
+            this.scene.remove(obstacle);
+            const obstacleIndex = this.obstacles.indexOf(obstacle);
+            if (obstacleIndex > -1) {
+                this.obstacles.splice(obstacleIndex, 1);
+            }
+            
+            // 新しい障害物を同じ位置に生成
+            this.loader.load(
+                randomModel.path,
+                (gltf) => {
+                    if (this.gameState.isGameOver || !this.gameState.isGameStarted) return;
+                    
+                    const newObstacle = gltf.scene;
+                    newObstacle.scale.set(randomModel.scale, randomModel.scale, randomModel.scale);
+                    newObstacle.position.copy(position);
+                    this.scene.add(newObstacle);
+                    this.obstacles.push(newObstacle);
+                },
+                null,
+                (error) => {
+                    console.error('GLTFLoader error during texture update:', error);
+                }
+            );
+        });
     }
 
     reset() {
