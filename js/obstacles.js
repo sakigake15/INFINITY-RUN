@@ -70,6 +70,10 @@ export class ObstacleManager {
         this.feverTimeTimer = setTimeout(() => {
             this.isFeverTime = false;
             this.feverTimeTimer = null;
+            // フィーバータイム終了時にBGMを元に戻す
+            if (this.audioManager) {
+                this.audioManager.endFeverTime();
+            }
         }, 5000); // 5秒後に終了
     }
 
@@ -244,6 +248,10 @@ export class ObstacleManager {
                 switch (coin.itemType) {
                     case 'potion':
                         this.gameState.addScore(50);
+                        // フィーバータイムBGMを開始
+                        if (this.audioManager) {
+                            this.audioManager.startFeverTime();
+                        }
                         this.startFeverTime();
                         break;
                     case 'pumpkin':
