@@ -320,6 +320,11 @@ export class ObstacleManager {
 
         // 衝突判定
         if (this.checkCollision()) {
+            // BGMを停止
+            if (this.audioManager) {
+                this.audioManager.stopCurrentBGM();
+            }
+            
             // 死亡音を再生
             this.deathSound.currentTime = 0;
             this.deathSound.play().catch(error => {
