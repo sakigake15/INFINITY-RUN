@@ -3,10 +3,12 @@ import { Player } from './player.js';
 import { ObstacleManager } from './obstacles.js';
 import { GameState } from './gameState.js';
 import { InputHandler } from './input.js';
+import { AudioManager } from './audioManager.js';
 
 class Game {
     constructor() {
         this.gameState = new GameState();
+        this.audioManager = new AudioManager();
         this.sceneManager = new SceneManager(this.gameState);
         this.player = new Player(this.sceneManager.getScene(), 'Rogue.glb');
         this.obstacleManager = new ObstacleManager(
@@ -14,7 +16,8 @@ class Game {
             this.gameState,
             this.player,
             this.sceneManager.getLaneWidth(),
-            this.sceneManager
+            this.sceneManager,
+            this.audioManager
         );
         this.inputHandler = new InputHandler(
             this.gameState,
@@ -45,6 +48,8 @@ class Game {
         this.gameState.startGame();
         this.obstacleManager.startSpawning();
         this.player.startRunning();
+        // BGMを開始（初期は地上世界）
+        this.audioManager.startBGM(this.gameState.getIsHellWorld());
     }
 
     resetGame() {

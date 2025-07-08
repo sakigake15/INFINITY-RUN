@@ -58,9 +58,14 @@ export class GameState {
         return false; // 世界は切り替わっていない
     }
 
-    handleGameOver(player, runningAction) {
+    handleGameOver(player, runningAction, audioManager = null) {
         this.isGameOver = true;
         this.obstacleSpeed = 0;
+
+        // BGMを停止
+        if (audioManager) {
+            audioManager.stopCurrentBGM();
+        }
 
         // プレイヤーモデルの全マテリアルを赤く変更
         player.traverse((child) => {

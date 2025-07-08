@@ -1,10 +1,11 @@
 export class ObstacleManager {
-    constructor(scene, gameState, player, laneWidth, sceneManager) {
+    constructor(scene, gameState, player, laneWidth, sceneManager, audioManager) {
         this.scene = scene;
         this.gameState = gameState;
         this.player = player;
         this.laneWidth = laneWidth;
         this.sceneManager = sceneManager;
+        this.audioManager = audioManager;
         this.obstacles = [];
         this.coins = [];
         this.potionChance = 0.01; // 1%の確率でポーションに変化
@@ -13,6 +14,10 @@ export class ObstacleManager {
         this.isFeverTime = false; // フィーバータイムの状態
         this.feverTimeTimer = null; // フィーバータイムのタイマー
         this.loader = new THREE.GLTFLoader();
+        
+        // 音声ファイルを読み込み
+        this.coinSound = new Audio('coin1.mp3');
+        this.coinSound.volume = 0.5; // 音量を調整
         
         // 障害物のモデルパスを配列で保持
         this.obstacleModels = [
@@ -242,12 +247,24 @@ export class ObstacleManager {
                         this.sceneManager.toggleWorld();
                         // 世界切り替え時に既存の障害物のテクスチャを更新
                         this.updateObstacleTextures();
+                        // BGMを切り替え
+                        if (this.audioManager) {
+                            this.audioManager.switchBGM(this.gameState.getIsHellWorld());
+                        }
                         break;
                     case 'coin':
                     default:
                         // 地獄世界では50点、地上世界では10点
                         const coinScore = this.gameState.getIsHellWorld() ? 50 : 10;
                         this.gameState.addScore(coinScore);
+                        
+                        // 地上世界でコインを取得した時のみ音声を再生
+                        if (!this.gameState.getIsHellWorld()) {
+                            this.coinSound.currentTime = 0; // 音声を最初から再生
+                            this.coinSound.play().catch(error => {
+                                console.log('音声再生エラー:', error);
+                            });
+                        }
                         break;
                 }
                 removeCoins.push(coin);
@@ -273,7 +290,8 @@ export class ObstacleManager {
         if (this.checkCollision()) {
             this.gameState.handleGameOver(
                 this.player.getModel(),
-                this.player.getRunningAction()
+                this.player.getRunningAction(),
+                this.audioManager
             );
         }
     }
