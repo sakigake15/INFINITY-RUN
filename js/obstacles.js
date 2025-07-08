@@ -18,9 +18,9 @@ export class ObstacleManager {
         
         // 音声ファイルを読み込み
         this.coinSound = new Audio('coin1.mp3');
-        this.coinSound.volume = 0.5; // 音量を調整
+        this.coinSound.volume = 0.3; // 音量を調整（0.5の60%）
         this.coinSound2 = new Audio('coin2.mp3');
-        this.coinSound2.volume = 0.5; // 音量を調整
+        this.coinSound2.volume = 0.3; // 音量を調整（0.5の60%）
         this.deathSound = new Audio('death.mp3');
         this.deathSound.volume = 0.7; // 音量を調整
         this.changeSound = new Audio('change.mp3');
