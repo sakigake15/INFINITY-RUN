@@ -4,12 +4,14 @@ import { ObstacleManager } from './obstacles.js';
 import { GameState } from './gameState.js';
 import { InputHandler } from './input.js';
 import { AudioManager } from './audioManager.js';
+import { ParticleSystem } from './particleSystem.js';
 
 class Game {
     constructor() {
         this.gameState = new GameState();
         this.audioManager = new AudioManager();
         this.sceneManager = new SceneManager(this.gameState);
+        this.particleSystem = new ParticleSystem(this.sceneManager.getScene());
         this.player = new Player(this.sceneManager.getScene(), 'Rogue.glb');
         this.obstacleManager = new ObstacleManager(
             this.sceneManager.getScene(),
@@ -17,7 +19,8 @@ class Game {
             this.player,
             this.sceneManager.getLaneWidth(),
             this.sceneManager,
-            this.audioManager
+            this.audioManager,
+            this.particleSystem
         );
         this.inputHandler = new InputHandler(
             this.gameState,
@@ -72,6 +75,10 @@ class Game {
             this.inputHandler.updatePlayerPosition();
             this.obstacleManager.update();
             this.player.update();
+            this.particleSystem.update();
+        } else {
+            // ゲームが停止中でもパーティクルは更新し続ける
+            this.particleSystem.update();
         }
         this.sceneManager.render();
     }

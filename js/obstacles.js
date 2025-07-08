@@ -1,11 +1,12 @@
 export class ObstacleManager {
-    constructor(scene, gameState, player, laneWidth, sceneManager, audioManager) {
+    constructor(scene, gameState, player, laneWidth, sceneManager, audioManager, particleSystem) {
         this.scene = scene;
         this.gameState = gameState;
         this.player = player;
         this.laneWidth = laneWidth;
         this.sceneManager = sceneManager;
         this.audioManager = audioManager;
+        this.particleSystem = particleSystem;
         this.obstacles = [];
         this.coins = [];
         this.potionChance = 0.01; // 1%の確率でポーションに変化
@@ -244,6 +245,11 @@ export class ObstacleManager {
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
+                // パーティクルエフェクトを生成（全てのアイテムで共通）
+                if (this.particleSystem) {
+                    this.particleSystem.createCoinParticles(coin.position);
+                }
+                
                 // アイテムタイプに応じてスコアと効果を適用
                 switch (coin.itemType) {
                     case 'potion':
