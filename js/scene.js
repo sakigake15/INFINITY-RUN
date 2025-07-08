@@ -224,14 +224,14 @@ export class SceneManager {
     }
 
     switchToHellWorld() {
-        // 背景を暗い赤に変更
-        this.scene.background = new THREE.Color(0x400000); // 暗い赤
+        // 背景をより明るい赤に変更
+        this.scene.background = new THREE.Color(0x800000); // より明るい赤
         
-        // 照明を赤く変更（透明度70%）
-        this.ambientLight.color.setHex(0xff4444);
-        this.ambientLight.intensity = 0.35; // 70%の透明度（0.5 * 0.7 = 0.35）
-        this.directionalLight.color.setHex(0xff0000);
-        this.directionalLight.intensity = 0.56; // 70%の透明度（0.8 * 0.7 = 0.56）
+        // 照明を赤く変更（明るさを上げる）
+        this.ambientLight.color.setHex(0xff6666);
+        this.ambientLight.intensity = 0.5; // 元の強度に戻す
+        this.directionalLight.color.setHex(0xff3333);
+        this.directionalLight.intensity = 0.8; // 元の強度に戻す
         
         // カメラをz軸180度回転
         this.camera.rotation.z = Math.PI;

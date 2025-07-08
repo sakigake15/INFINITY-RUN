@@ -243,7 +243,9 @@ export class ObstacleManager {
                         break;
                     case 'coin':
                     default:
-                        this.gameState.addScore(10);
+                        // 地獄世界では50点、地上世界では10点
+                        const coinScore = this.gameState.getIsHellWorld() ? 50 : 10;
+                        this.gameState.addScore(coinScore);
                         break;
                 }
                 removeCoins.push(coin);
