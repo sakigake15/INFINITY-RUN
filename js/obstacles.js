@@ -122,34 +122,39 @@ export class ObstacleManager {
         let yPosition = 0.5;
         let itemType = 'coin';
 
-        // 地獄世界ではキャンディー、地上世界ではかぼちゃを出現
-        if (this.gameState.getIsHellWorld()) {
-            const candyChance = Math.random() < this.candyChance;
-            if (candyChance) {
-                // 地獄世界：キャンディー
-                modelPath = 'lollipopB.gltf.glb';
-                scale = 1.2;
-                yPosition = 0;
-                itemType = 'candy';
-            }
-        } else {
-            const pumpkinChance = Math.random() < this.pumpkinChance;
-            if (pumpkinChance) {
-                // 地上世界：かぼちゃ
-                modelPath = 'pumpkinLarge.gltf.glb';
-                scale = 1.2;
-                yPosition = 0.5;
-                itemType = 'pumpkin';
+        // フィーバータイム中でない場合のみ特別アイテムを生成
+        if (!this.isFeverTime) {
+            // 地獄世界ではキャンディー、地上世界ではかぼちゃを出現
+            if (this.gameState.getIsHellWorld()) {
+                const candyChance = Math.random() < this.candyChance;
+                if (candyChance) {
+                    // 地獄世界：キャンディー
+                    modelPath = 'lollipopB.gltf.glb';
+                    scale = 1.2;
+                    yPosition = 0;
+                    itemType = 'candy';
+                }
+            } else {
+                const pumpkinChance = Math.random() < this.pumpkinChance;
+                if (pumpkinChance) {
+                    // 地上世界：かぼちゃ
+                    modelPath = 'pumpkinLarge.gltf.glb';
+                    scale = 1.2;
+                    yPosition = 0.5;
+                    itemType = 'pumpkin';
+                }
             }
         }
 
-        // ポーションの処理（既存の確率で別途判定）
-        const isPotion = Math.random() < this.potionChance;
-        if (isPotion) {
-            modelPath = 'bottle_A_green.gltf';
-            scale = 1.0;
-            yPosition = 0;
-            itemType = 'potion';
+        // ポーションの処理（地上世界のみで生成）
+        if (!this.gameState.getIsHellWorld()) {
+            const isPotion = Math.random() < this.potionChance;
+            if (isPotion) {
+                modelPath = 'bottle_A_green.gltf';
+                scale = 1.0;
+                yPosition = 0;
+                itemType = 'potion';
+            }
         }
 
         this.loader.load(
