@@ -4,12 +4,14 @@ import { ObstacleManager } from './obstacles.js';
 import { GameState } from './gameState.js';
 import { InputHandler } from './input.js';
 import { AudioManager } from './audioManager.js';
+import { SoundEffectManager } from './soundEffectManager.js';
 import { ParticleSystem } from './particleSystem.js';
 
 class Game {
     constructor() {
         this.gameState = new GameState();
         this.audioManager = new AudioManager();
+        this.soundEffectManager = new SoundEffectManager();
         this.sceneManager = new SceneManager(this.gameState);
         this.particleSystem = new ParticleSystem(this.sceneManager.getScene());
         this.player = new Player(this.sceneManager.getScene(), 'Rogue.glb');
@@ -20,6 +22,7 @@ class Game {
             this.sceneManager.getLaneWidth(),
             this.sceneManager,
             this.audioManager,
+            this.soundEffectManager,
             this.particleSystem
         );
         this.inputHandler = new InputHandler(
@@ -42,17 +45,20 @@ class Game {
             this.resetGame();
         });
 
-        document.getElementById('startButton').addEventListener('click', () => {
+        document.getElementById('startButton').addEventListener('click', async () => {
+            // ユーザーインタラクション時に音声を初期化
+            await this.audioManager.initializeAudio();
+            await this.soundEffectManager.initializeSounds();
             this.startGame();
         });
     }
 
-    startGame() {
+    async startGame() {
         this.gameState.startGame();
         this.obstacleManager.startSpawning();
         this.player.startRunning();
         // BGMを開始（初期は地上世界）
-        this.audioManager.startBGM(this.gameState.getIsHellWorld());
+        await this.audioManager.startBGM(this.gameState.getIsHellWorld());
     }
 
     resetGame() {

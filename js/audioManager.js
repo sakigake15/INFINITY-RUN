@@ -13,32 +13,110 @@ export class AudioManager {
         this.jigokuBGM.volume = 0.3;
         this.feverBGM.volume = 0.4;
         
+        // モバイル対応のための設定
+        this.chijouBGM.preload = 'auto';
+        this.jigokuBGM.preload = 'auto';
+        this.feverBGM.preload = 'auto';
+        
         this.currentBGM = null;
         this.previousBGM = null; // フィーバータイム前のBGMを記録
         this.isPlaying = false;
         this.isFeverTime = false;
+        this.isInitialized = false; // 音声コンテキスト初期化フラグ
+        this.audioContext = null;
+        
+        // モバイル検出
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        this.initializeAudioContext();
+    }
+
+    // AudioContextの初期化（モバイル対応）
+    async initializeAudioContext() {
+        try {
+            // Web Audio APIのサポート確認
+            window.AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (window.AudioContext) {
+                this.audioContext = new AudioContext();
+            }
+        } catch (error) {
+            console.log('AudioContext初期化エラー:', error);
+        }
+    }
+
+    // ユーザーインタラクション後の音声初期化
+    async initializeAudio() {
+        if (this.isInitialized) return;
+        
+        try {
+            // AudioContextが一時停止状態の場合は再開
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+            
+            // モバイルでの音声準備
+            if (this.isMobile) {
+                // 各音声ファイルの準備
+                const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+                
+                for (const audio of audioFiles) {
+                    try {
+                        audio.muted = true;
+                        await audio.play();
+                        audio.pause();
+                        audio.muted = false;
+                        audio.currentTime = 0;
+                    } catch (error) {
+                        console.log('音声準備エラー:', error);
+                    }
+                }
+            }
+            
+            this.isInitialized = true;
+            console.log('音声初期化完了');
+        } catch (error) {
+            console.log('音声初期化エラー:', error);
+        }
     }
 
     // 地上世界のBGMを再生
-    playChijouBGM() {
+    async playChijouBGM() {
+        if (!this.isInitialized) {
+            await this.initializeAudio();
+        }
+        
         this.stopCurrentBGM();
         this.currentBGM = this.chijouBGM;
         this.currentBGM.currentTime = 0;
-        this.currentBGM.play().catch(error => {
+        
+        try {
+            await this.currentBGM.play();
+            this.isPlaying = true;
+            console.log('地上BGM再生開始');
+        } catch (error) {
             console.log('地上BGM再生エラー:', error);
-        });
-        this.isPlaying = true;
+            this.isPlaying = false;
+        }
     }
 
     // 地獄世界のBGMを再生
-    playJigokuBGM() {
+    async playJigokuBGM() {
+        if (!this.isInitialized) {
+            await this.initializeAudio();
+        }
+        
         this.stopCurrentBGM();
         this.currentBGM = this.jigokuBGM;
         this.currentBGM.currentTime = 0;
-        this.currentBGM.play().catch(error => {
+        
+        try {
+            await this.currentBGM.play();
+            this.isPlaying = true;
+            console.log('地獄BGM再生開始');
+        } catch (error) {
             console.log('地獄BGM再生エラー:', error);
-        });
-        this.isPlaying = true;
+            this.isPlaying = false;
+        }
     }
 
     // 現在のBGMを停止
@@ -90,8 +168,12 @@ export class AudioManager {
     }
 
     // フィーバータイム開始
-    startFeverTime() {
+    async startFeverTime() {
         if (this.isFeverTime) return; // 既にフィーバータイム中の場合は何もしない
+        
+        if (!this.isInitialized) {
+            await this.initializeAudio();
+        }
         
         this.isFeverTime = true;
         this.previousBGM = this.currentBGM; // 現在のBGMを記録
@@ -100,14 +182,19 @@ export class AudioManager {
         this.stopCurrentBGM();
         this.currentBGM = this.feverBGM;
         this.currentBGM.currentTime = 0;
-        this.currentBGM.play().catch(error => {
+        
+        try {
+            await this.currentBGM.play();
+            this.isPlaying = true;
+            console.log('フィーバーBGM再生開始');
+        } catch (error) {
             console.log('フィーバーBGM再生エラー:', error);
-        });
-        this.isPlaying = true;
+            this.isPlaying = false;
+        }
     }
 
     // フィーバータイム終了
-    endFeverTime() {
+    async endFeverTime() {
         if (!this.isFeverTime) return; // フィーバータイム中でない場合は何もしない
         
         this.isFeverTime = false;
@@ -117,10 +204,15 @@ export class AudioManager {
         if (this.previousBGM) {
             this.currentBGM = this.previousBGM;
             this.currentBGM.currentTime = 0;
-            this.currentBGM.play().catch(error => {
+            
+            try {
+                await this.currentBGM.play();
+                this.isPlaying = true;
+                console.log('BGM復帰再生開始');
+            } catch (error) {
                 console.log('BGM復帰再生エラー:', error);
-            });
-            this.isPlaying = true;
+                this.isPlaying = false;
+            }
             this.previousBGM = null;
         }
     }
