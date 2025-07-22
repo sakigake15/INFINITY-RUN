@@ -7,6 +7,7 @@
 body {
     overflow: hidden;
     background-color: #000;
+    font-family: 'Share Tech', monospace;
 }
 
 #game {
@@ -25,7 +26,7 @@ body {
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 1.5rem;
-    font-family: Arial, sans-serif;
+    font-family: 'Share Tech', monospace;
     z-index: 1000;
     opacity: 1;
     transition: opacity 0.3s ease;
@@ -41,7 +42,11 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.85);
+    background-color: #000;
+    background-image: url('title.jpg');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -55,55 +60,29 @@ body {
     pointer-events: none;
 }
 
-.title-content {
-    background-color: rgba(255, 255, 255, 0.95);
-    padding: 2rem;
-    border-radius: 15px;
-    text-align: center;
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
-    transform: translateY(0);
-    transition: transform 0.5s ease;
-}
-
-.title-screen.hidden .title-content {
-    transform: translateY(20px);
-}
-
-.title-content h1 {
-    color: #2c3e50;
-    margin-bottom: 1.5rem;
-    font-size: 2.5rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.instructions {
-    color: #34495e;
-    margin-bottom: 2rem;
-    font-size: 1.2rem;
-    line-height: 1.6;
-}
-
 #startButton {
-    background-color: #3498db;
+    background-image: linear-gradient(45deg, #FF4500, #FF8C00);
     color: white;
     border: none;
     padding: 1rem 2rem;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-image 0.4s ease-in-out, transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-weight: bold;
+    font-family: 'Share Tech', monospace;
 }
 
 #startButton:hover {
-    background-color: #2980b9;
+    background-image: linear-gradient(45deg, #FF8C00, #FF4500);
     transform: translateY(-2px);
-    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 6px 20px rgba(255, 69, 0, 0.3);
 }
 
 #startButton:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .game-over-screen {
@@ -183,6 +162,7 @@ body {
     cursor: pointer;
     border: none;
     transition: all 0.2s ease;
+    font-family: 'Share Tech', monospace;
 }
 
 #retryButton {
