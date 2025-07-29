@@ -41,70 +41,16 @@ class Game {
     }
 
     setupEventListeners() {
-        document.getElementById('retryButton').addEventListener('click', async () => {
-            // リトライ時も音声初期化を確実にする
-            await this.ensureAudioInitialization();
+        document.getElementById('retryButton').addEventListener('click', () => {
             this.resetGame();
         });
 
         document.getElementById('startButton').addEventListener('click', async () => {
             // ユーザーインタラクション時に音声を初期化
-            await this.ensureAudioInitialization();
+            await this.audioManager.initializeAudio();
+            await this.soundEffectManager.initializeSounds();
             this.startGame();
         });
-
-        // ページ読み込み完了後の追加初期化
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 最初のユーザーインタラクションを待つ
-            const waitForInteraction = () => {
-                return new Promise((resolve) => {
-                    const handleInteraction = async () => {
-                        document.removeEventListener('click', handleInteraction);
-                        document.removeEventListener('touchstart', handleInteraction);
-                        document.removeEventListener('keydown', handleInteraction);
-                        await this.ensureAudioInitialization();
-                        resolve();
-                    };
-                    
-                    document.addEventListener('click', handleInteraction, { once: true });
-                    document.addEventListener('touchstart', handleInteraction, { once: true });
-                    document.addEventListener('keydown', handleInteraction, { once: true });
-                });
-            };
-            
-            // 最初のインタラクションを待機
-            await waitForInteraction();
-        });
-    }
-
-    // 音声初期化を確実に行う
-    async ensureAudioInitialization() {
-        try {
-            console.log('音声初期化処理開始');
-            
-            // 並列で初期化を実行
-            await Promise.all([
-                this.audioManager.initializeAudio(),
-                this.soundEffectManager.initializeSounds()
-            ]);
-            
-            console.log('音声初期化処理完了');
-        } catch (error) {
-            console.log('音声初期化処理エラー:', error);
-            
-            // エラーが発生した場合は個別に初期化を試行
-            try {
-                await this.audioManager.initializeAudio();
-            } catch (e) {
-                console.log('BGM初期化エラー:', e);
-            }
-            
-            try {
-                await this.soundEffectManager.initializeSounds();
-            } catch (e) {
-                console.log('SE音初期化エラー:', e);
-            }
-        }
     }
 
     async startGame() {

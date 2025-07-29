@@ -105,49 +105,39 @@ export class AudioManager {
         }
     }
 
-    // ユーザーインタラクション後の音声初期化（改善版）
+    // ユーザーインタラクション後の音声初期化（シンプル版）
     async initializeAudio() {
-        if (this.isInitialized && this.initializationAttempts < this.maxInitializationAttempts) {
-            return;
-        }
-        
-        this.initializationAttempts++;
+        if (this.isInitialized) return;
         
         try {
-            console.log(`音声初期化開始 (試行回数: ${this.initializationAttempts})`);
+            console.log('音声初期化開始');
             
             // AudioContextの状態確認・復旧
-            if (this.audioContext) {
-                if (this.audioContext.state === 'suspended') {
-                    await this.audioContext.resume();
-                    console.log('AudioContext復旧完了');
-                }
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
             }
             
-            // モバイルでのより確実な音声準備
+            // モバイルでの音声準備
             if (this.isMobile) {
-                // iOS特有の処理
-                if (this.isIOS) {
-                    await this.prepareIOSAudio();
-                } else {
-                    await this.prepareAndroidAudio();
+                const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+                
+                for (const audio of audioFiles) {
+                    try {
+                        audio.muted = true;
+                        await audio.play();
+                        audio.pause();
+                        audio.muted = false;
+                        audio.currentTime = 0;
+                    } catch (error) {
+                        console.log('音声準備エラー:', error);
+                    }
                 }
-            } else {
-                // デスクトップでの音声準備
-                await this.prepareDesktopAudio();
             }
             
             this.isInitialized = true;
             console.log('音声初期化完了');
-            
         } catch (error) {
             console.log('音声初期化エラー:', error);
-            
-            // 再試行ロジック
-            if (this.initializationAttempts < this.maxInitializationAttempts) {
-                console.log('音声初期化を再試行します...');
-                setTimeout(() => this.initializeAudio(), 1000);
-            }
         }
     }
 

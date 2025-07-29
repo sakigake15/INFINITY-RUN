@@ -82,41 +82,34 @@ export class SoundEffectManager {
         }
     }
 
-    // ユーザーインタラクション後のSE音初期化（改善版）
+    // ユーザーインタラクション後のSE音初期化（シンプル版）
     async initializeSounds() {
-        if (this.isInitialized && this.initializationAttempts < this.maxInitializationAttempts) {
-            return;
-        }
-        
-        this.initializationAttempts++;
+        if (this.isInitialized) return;
         
         try {
-            console.log(`SE音初期化開始 (試行回数: ${this.initializationAttempts})`);
+            console.log('SE音初期化開始');
             
-            // モバイルでのより確実なSE音準備
+            // モバイルでのSE音準備
             if (this.isMobile) {
-                // iOS特有の処理
-                if (this.isIOS) {
-                    await this.prepareIOSSounds();
-                } else {
-                    await this.prepareAndroidSounds();
+                const soundFiles = [this.coinSound, this.coinSound2, this.deathSound, this.changeSound];
+                
+                for (const sound of soundFiles) {
+                    try {
+                        sound.muted = true;
+                        await sound.play();
+                        sound.pause();
+                        sound.muted = false;
+                        sound.currentTime = 0;
+                    } catch (error) {
+                        console.log('SE音準備エラー:', error);
+                    }
                 }
-            } else {
-                // デスクトップでのSE音準備
-                await this.prepareDesktopSounds();
             }
             
             this.isInitialized = true;
             console.log('SE音初期化完了');
-            
         } catch (error) {
             console.log('SE音初期化エラー:', error);
-            
-            // 再試行ロジック
-            if (this.initializationAttempts < this.maxInitializationAttempts) {
-                console.log('SE音初期化を再試行します...');
-                setTimeout(() => this.initializeSounds(), 1000);
-            }
         }
     }
 
@@ -180,82 +173,59 @@ export class SoundEffectManager {
         }
     }
 
-    // 音声プールから利用可能な音声オブジェクトを取得
-    getAvailableSound(originalSound) {
-        // 元の音声が再生中でない場合はそのまま使用
-        if (originalSound.paused || originalSound.ended) {
-            return originalSound;
-        }
-        
-        // 新しい音声オブジェクトを作成（重複再生対応）
-        const newSound = originalSound.cloneNode();
-        newSound.volume = originalSound.volume;
-        return newSound;
-    }
-
-    // 音声再生の共通処理（信頼性向上）
-    async playSound(sound, soundName) {
+    // 地上コイン音を再生
+    async playCoinSound() {
         if (!this.isInitialized) {
             await this.initializeSounds();
         }
         
         try {
-            const availableSound = this.getAvailableSound(sound);
-            availableSound.currentTime = 0;
-            
-            // 再生前に音声の状態を確認
-            if (availableSound.readyState >= 2) { // HAVE_CURRENT_DATA以上
-                await availableSound.play();
-                console.log(`${soundName}再生成功`);
-            } else {
-                // 音声が準備できていない場合は読み込み完了を待つ
-                await new Promise((resolve, reject) => {
-                    const timeout = setTimeout(() => {
-                        reject(new Error('音声読み込みタイムアウト'));
-                    }, 3000);
-                    
-                    availableSound.addEventListener('canplaythrough', () => {
-                        clearTimeout(timeout);
-                        resolve();
-                    }, { once: true });
-                    
-                    availableSound.load();
-                });
-                
-                await availableSound.play();
-                console.log(`${soundName}再生成功（遅延読み込み）`);
-            }
+            this.coinSound.currentTime = 0;
+            await this.coinSound.play();
         } catch (error) {
-            console.log(`${soundName}再生エラー:`, error);
-            
-            // フォールバック: 基本的な再生を試行
-            try {
-                sound.currentTime = 0;
-                await sound.play();
-                console.log(`${soundName}フォールバック再生成功`);
-            } catch (fallbackError) {
-                console.log(`${soundName}フォールバック再生もエラー:`, fallbackError);
-            }
+            console.log('地上コイン音声再生エラー:', error);
         }
-    }
-
-    // 地上コイン音を再生
-    async playCoinSound() {
-        await this.playSound(this.coinSound, '地上コイン音');
     }
 
     // 地獄コイン音を再生
     async playCoinSound2() {
-        await this.playSound(this.coinSound2, '地獄コイン音');
+        if (!this.isInitialized) {
+            await this.initializeSounds();
+        }
+        
+        try {
+            this.coinSound2.currentTime = 0;
+            await this.coinSound2.play();
+        } catch (error) {
+            console.log('地獄コイン音声再生エラー:', error);
+        }
     }
 
     // 死亡音を再生
     async playDeathSound() {
-        await this.playSound(this.deathSound, '死亡音');
+        if (!this.isInitialized) {
+            await this.initializeSounds();
+        }
+        
+        try {
+            this.deathSound.currentTime = 0;
+            await this.deathSound.play();
+        } catch (error) {
+            console.log('死亡音声再生エラー:', error);
+        }
     }
 
     // 世界切り替え音を再生
     async playChangeSound() {
-        await this.playSound(this.changeSound, '世界切り替え音');
+        if (!this.isInitialized) {
+            await this.initializeSounds();
+        }
+        
+        try {
+            this.changeSound.currentTime = 0;
+            await this.changeSound.play();
+        } catch (error) {
+            console.log('世界切り替え音声再生エラー:', error);
+        }
     }
 }
