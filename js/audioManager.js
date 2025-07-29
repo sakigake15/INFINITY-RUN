@@ -18,17 +18,27 @@ export class AudioManager {
         this.jigokuBGM.preload = 'auto';
         this.feverBGM.preload = 'auto';
         
+        // iOS Safari対応
+        this.chijouBGM.setAttribute('playsinline', '');
+        this.jigokuBGM.setAttribute('playsinline', '');
+        this.feverBGM.setAttribute('playsinline', '');
+        
         this.currentBGM = null;
         this.previousBGM = null; // フィーバータイム前のBGMを記録
         this.isPlaying = false;
         this.isFeverTime = false;
         this.isInitialized = false; // 音声コンテキスト初期化フラグ
+        this.isUnlocked = false; // 音声アンロック状態
         this.audioContext = null;
+        this.initializationAttempts = 0;
+        this.maxInitializationAttempts = 3;
         
         // モバイル検出
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         
         this.initializeAudioContext();
+        this.setupTouchUnlock();
     }
 
     // AudioContextの初期化（モバイル対応）
@@ -44,38 +54,160 @@ export class AudioManager {
         }
     }
 
-    // ユーザーインタラクション後の音声初期化
+    // タッチアンロック設定（モバイル対応）
+    setupTouchUnlock() {
+        if (!this.isMobile) return;
+        
+        const unlockAudio = async () => {
+            if (this.isUnlocked) return;
+            
+            try {
+                console.log('音声アンロック処理開始');
+                await this.unlockAudio();
+                this.isUnlocked = true;
+                console.log('音声アンロック完了');
+                
+                // イベントリスナーを削除
+                document.removeEventListener('touchstart', unlockAudio);
+                document.removeEventListener('touchend', unlockAudio);
+                document.removeEventListener('click', unlockAudio);
+            } catch (error) {
+                console.log('音声アンロックエラー:', error);
+            }
+        };
+        
+        // 複数のイベントでアンロックを試行
+        document.addEventListener('touchstart', unlockAudio, { once: true });
+        document.addEventListener('touchend', unlockAudio, { once: true });
+        document.addEventListener('click', unlockAudio, { once: true });
+    }
+
+    // 音声アンロック処理
+    async unlockAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = originalVolume;
+            } catch (error) {
+                console.log('個別音声アンロックエラー:', error);
+            }
+        }
+        
+        // AudioContextのレジューム
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
+    }
+
+    // ユーザーインタラクション後の音声初期化（改善版）
     async initializeAudio() {
-        if (this.isInitialized) return;
+        if (this.isInitialized && this.initializationAttempts < this.maxInitializationAttempts) {
+            return;
+        }
+        
+        this.initializationAttempts++;
         
         try {
-            // AudioContextが一時停止状態の場合は再開
-            if (this.audioContext && this.audioContext.state === 'suspended') {
-                await this.audioContext.resume();
+            console.log(`音声初期化開始 (試行回数: ${this.initializationAttempts})`);
+            
+            // AudioContextの状態確認・復旧
+            if (this.audioContext) {
+                if (this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                    console.log('AudioContext復旧完了');
+                }
             }
             
-            // モバイルでの音声準備
+            // モバイルでのより確実な音声準備
             if (this.isMobile) {
-                // 各音声ファイルの準備
-                const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
-                
-                for (const audio of audioFiles) {
-                    try {
-                        audio.muted = true;
-                        await audio.play();
-                        audio.pause();
-                        audio.muted = false;
-                        audio.currentTime = 0;
-                    } catch (error) {
-                        console.log('音声準備エラー:', error);
-                    }
+                // iOS特有の処理
+                if (this.isIOS) {
+                    await this.prepareIOSAudio();
+                } else {
+                    await this.prepareAndroidAudio();
                 }
+            } else {
+                // デスクトップでの音声準備
+                await this.prepareDesktopAudio();
             }
             
             this.isInitialized = true;
             console.log('音声初期化完了');
+            
         } catch (error) {
             console.log('音声初期化エラー:', error);
+            
+            // 再試行ロジック
+            if (this.initializationAttempts < this.maxInitializationAttempts) {
+                console.log('音声初期化を再試行します...');
+                setTimeout(() => this.initializeAudio(), 1000);
+            }
+        }
+    }
+
+    // iOS用音声準備
+    async prepareIOSAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                // iOSでは明示的にloadを呼ぶ
+                audio.load();
+                
+                // 一時的にミュートして再生テスト
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+                audio.muted = true;
+                
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                
+                audio.muted = false;
+                audio.volume = originalVolume;
+                
+                console.log('iOS音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('iOS音声準備エラー:', audio.src, error);
+            }
+        }
+    }
+
+    // Android用音声準備
+    async prepareAndroidAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                audio.muted = true;
+                await audio.play();
+                audio.pause();
+                audio.muted = false;
+                audio.currentTime = 0;
+                console.log('Android音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('Android音声準備エラー:', audio.src, error);
+            }
+        }
+    }
+
+    // デスクトップ用音声準備
+    async prepareDesktopAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                audio.load();
+                console.log('デスクトップ音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('デスクトップ音声準備エラー:', audio.src, error);
+            }
         }
     }
 
