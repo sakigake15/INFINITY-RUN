@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>音声テスト - スマホ自動再生ポリシー対応デモ</title>
+    <title>HowlerJS音声テスト - スマホ自動再生ポリシー対応デモ</title>
+    
+    <!-- HowlerJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    
     <style>
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
             color: white;
             display: flex;
             justify-content: center;
@@ -24,7 +28,7 @@
             border-radius: 20px;
             padding: 40px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
+            max-width: 500px;
             width: 90%;
         }
 
@@ -61,17 +65,17 @@
         }
 
         button {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            background: linear-gradient(45deg, #3498db, #2980b9);
             border: none;
             color: white;
             padding: 15px 30px;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
             border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            margin: 10px;
+            margin: 5px;
         }
 
         button:hover {
@@ -96,7 +100,7 @@
         }
 
         .success {
-            color: #aef7cc;
+            color: #2ecc71;
             font-weight: bold;
         }
 
@@ -114,25 +118,78 @@
             opacity: 0.8;
             margin-top: 20px;
         }
+
+        .volume-control {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+
+        .volume-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            border: none;
+        }
+
+        .howler-badge {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎵 音声テストデモ</h1>
+        <div class="howler-badge">🔊 HowlerJS Powered</div>
+        <h1>🎵 HowlerJS音声テストデモ</h1>
         
         <div class="info">
-            このデモは、スマートフォンの自動再生ポリシーに対応した音声管理システムの動作を確認します。<br>
-            <strong>音声重複防止機能付き</strong> - BGM切り替え時に前の音声を確実に停止します。<br>
-            <strong>バックグラウンド再生防止</strong> - 他のタブに移動時に音声を自動停止します。
+            <strong>HowlerJS</strong>を使用したスマートフォン自動再生ポリシー対応音声管理システム<br>
+            <strong>高品質音声再生</strong> - Web Audio API & HTML5 Audio 対応<br>
+            <strong>音声重複防止</strong> - BGM切り替え時に前の音声を確実に停止<br>
+            <strong>バックグラウンド再生防止</strong> - 他のタブ移動時に音声を自動停止
         </div>
 
         <div id="loadingStatus" class="status">
             <div class="loading"></div>
-            <span>音声ファイルを読み込み中...</span>
+            <span>HowlerJS音声ファイルを読み込み中...</span>
         </div>
 
         <div id="audioStatus" class="status" style="display: none;">
-            <span>音声の準備が完了しました！</span>
+            <span>HowlerJS音声の準備が完了しました！</span>
         </div>
 
         <div class="controls">
@@ -140,25 +197,34 @@
         </div>
 
         <div id="playbackStatus" class="status" style="display: none;">
-            <span>BGMを再生中...</span>
+            <span>HowlerJSBGMを再生中...</span>
         </div>
 
         <div class="controls" id="bgmControls" style="display: none;">
-            <button id="playChijouBtn">地上BGM</button>
-            <button id="playJigokuBtn">地獄BGM</button>
-            <button id="playFeverBtn">フィーバーBGM</button>
-            <button id="stopBtn">停止</button>
+            <button id="playChijouBtn">🌍 地上BGM</button>
+            <button id="playJigokuBtn">🔥 地獄BGM</button>
+            <button id="playFeverBtn">⚡ フィーバーBGM</button>
+            <button id="stopBtn">⏹️ 停止</button>
+        </div>
+
+        <div class="volume-control" id="volumeControls" style="display: none;">
+            <h3>🎚️ 音量制御</h3>
+            <button id="muteBtn">🔇 ミュート</button>
+            <div class="volume-slider">
+                <label for="volumeSlider">マスター音量:</label>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+            </div>
         </div>
 
         <div class="device-info" id="deviceInfo">
-            端末情報を取得中...
+            HowlerJS端末情報を取得中...
         </div>
         
         <div class="device-info" style="margin-top: 10px; font-size: 0.7em; opacity: 0.6;">
-            Version 1.1.5 - 初期化前誤動作防止版
+            Version 2.0.0 - HowlerJS音声管理システム
         </div>
     </div>
 
-    <script type="module" src="js/sound_test.js"></script>
+    <script type="module" src="js/howler_sound_test.js"></script>
 </body>
 </html>
