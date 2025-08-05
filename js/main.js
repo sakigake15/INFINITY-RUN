@@ -3,14 +3,14 @@ import { Player } from './player.js';
 import { ObstacleManager } from './obstacles.js';
 import { GameState } from './gameState.js';
 import { InputHandler } from './input.js';
-import { AudioManager } from './audioManager.js';
+import { HowlerSoundManager } from './howlerSoundManager.js';
 import { SoundEffectManager } from './soundEffectManager.js';
 import { ParticleSystem } from './particleSystem.js';
 
 class Game {
     constructor() {
         this.gameState = new GameState();
-        this.audioManager = new AudioManager();
+        this.audioManager = new HowlerSoundManager();
         this.soundEffectManager = new SoundEffectManager();
         this.sceneManager = new SceneManager(this.gameState);
         this.particleSystem = new ParticleSystem(this.sceneManager.getScene());
@@ -52,15 +52,18 @@ class Game {
         });
 
         document.getElementById('startButton').addEventListener('click', async () => {
-            // ユーザーインタラクション時に音声を初期化（Version 1.1.5対応）
+            // ユーザーインタラクション時に音声を初期化（HowlerJS Version 2.0.0対応）
             try {
+                // HowlerSoundManagerの音声ファイル事前読み込み
+                await this.audioManager.preloadSounds();
+                // HowlerSoundManagerの音声初期化
                 await this.audioManager.initializeAudio();
                 await this.soundEffectManager.initializeSounds();
                 this.isAudioInitialized = true; // 初期化完了フラグを設定
-                console.log('メインゲーム音声初期化完了');
+                console.log('メインゲーム HowlerJS音声初期化完了');
                 this.startGame();
             } catch (error) {
-                console.error('メインゲーム音声初期化エラー:', error);
+                console.error('メインゲーム HowlerJS音声初期化エラー:', error);
                 // 音声初期化に失敗してもゲームは開始する
                 this.startGame();
             }
@@ -72,7 +75,15 @@ class Game {
         this.obstacleManager.startSpawning();
         this.player.startRunning();
         // BGMを開始（初期は地上世界）
-        await this.audioManager.startBGM(this.gameState.getIsHellWorld());
+        try {
+            if (this.gameState.getIsHellWorld()) {
+                await this.audioManager.playBGM('jigoku');
+            } else {
+                await this.audioManager.playBGM('chijou');
+            }
+        } catch (error) {
+            console.error('HowlerJS BGM再生エラー:', error);
+        }
     }
 
     resetGame() {
@@ -139,7 +150,7 @@ class Game {
         });
     }
 
-    // バックグラウンド時の音声停止（Version 1.1.5）
+    // バックグラウンド時の音声停止（HowlerJS Version 2.0.0）
     pauseOnBackground() {
         // 音声初期化完了前は何もしない（重要：ゲーム開始前の誤動作防止）
         if (!this.audioManager || !this.isAudioInitialized) {
@@ -148,14 +159,14 @@ class Game {
         }
         
         try {
-            this.audioManager.pauseBGM();
-            console.log('メインゲーム: バックグラウンド再生防止 - BGM一時停止');
+            this.audioManager.pauseCurrentBGM();
+            console.log('メインゲーム: HowlerJS バックグラウンド再生防止 - BGM一時停止');
         } catch (error) {
-            console.error('メインゲーム: バックグラウンド音声停止エラー:', error);
+            console.error('メインゲーム: HowlerJS バックグラウンド音声停止エラー:', error);
         }
     }
 
-    // フォアグラウンド復帰時の処理（Version 1.1.5）
+    // フォアグラウンド復帰時の処理（HowlerJS Version 2.0.0）
     resumeFromBackground() {
         // 音声初期化完了前は何もしない（重要：ゲーム開始前の誤動作防止）
         if (!this.audioManager || !this.isAudioInitialized) {
@@ -166,10 +177,10 @@ class Game {
         // ゲーム中の場合のみBGMを再開
         if (this.gameState.isGameStarted && !this.gameState.isGameOver) {
             try {
-                this.audioManager.resumeBGM();
-                console.log('メインゲーム: フォアグラウンド復帰 - BGM再開');
+                this.audioManager.resumeCurrentBGM();
+                console.log('メインゲーム: HowlerJS フォアグラウンド復帰 - BGM再開');
             } catch (error) {
-                console.error('メインゲーム: フォアグラウンド音声再開エラー:', error);
+                console.error('メインゲーム: HowlerJS フォアグラウンド音声再開エラー:', error);
             }
         } else {
             console.log('メインゲーム: ゲーム停止中のため音声再開なし');
