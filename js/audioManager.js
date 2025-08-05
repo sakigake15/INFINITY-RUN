@@ -39,7 +39,8 @@ export class AudioManager {
         this.isAndroid = /Android/i.test(navigator.userAgent);
         
         this.initializeAudioContext();
-        this.setupTouchUnlock();
+        // 自動音声アンロックを無効化（手動初期化まで待機）
+        // this.setupTouchUnlock();
     }
 
     // AudioContextの初期化（モバイル対応）

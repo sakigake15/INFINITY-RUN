@@ -17,6 +17,9 @@ class SoundTestDemo {
         this.playFeverBtn = document.getElementById('playFeverBtn');
         this.stopBtn = document.getElementById('stopBtn');
         
+        // バックグラウンド再生防止の設定
+        this.setupBackgroundPlayPrevention();
+        
         this.init();
     }
 
@@ -295,6 +298,66 @@ class SoundTestDemo {
         this.playJigokuBtn.disabled = false;
         this.playFeverBtn.disabled = false;
         this.stopBtn.disabled = false;
+    }
+
+    // バックグラウンド再生防止の設定 (Version 1.1.2 - バックグラウンド再生停止)
+    setupBackgroundPlayPrevention() {
+        // Page Visibility API を使用してタブの可視性を監視
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // タブが非表示になった時（他のタブに移動、最小化など）
+                console.log('タブが非表示になりました - 音声を停止');
+                this.pauseOnBackground();
+            } else {
+                // タブが表示された時
+                console.log('タブが表示されました');
+                this.resumeFromBackground();
+            }
+        });
+
+        // window.onblur/onfocus でもバックアップ
+        window.addEventListener('blur', () => {
+            console.log('ウィンドウがフォーカスを失いました - 音声を停止');
+            this.pauseOnBackground();
+        });
+
+        window.addEventListener('focus', () => {
+            console.log('ウィンドウがフォーカスを取得しました');
+            this.resumeFromBackground();
+        });
+
+        // モバイルでのページ離脱時
+        window.addEventListener('pagehide', () => {
+            console.log('ページが隠されました - 音声を停止');
+            this.pauseOnBackground();
+        });
+
+        window.addEventListener('pageshow', () => {
+            console.log('ページが表示されました');
+            this.resumeFromBackground();
+        });
+    }
+
+    // バックグラウンド時の音声停止
+    pauseOnBackground() {
+        if (this.audioManager && this.isInitialized) {
+            try {
+                this.audioManager.stopCurrentBGM();
+                this.playbackStatus.innerHTML = '<span style="color: #ffa500;">⏸️ バックグラウンド時は音声を停止中</span>';
+                console.log('バックグラウンド再生防止: 音声停止');
+            } catch (error) {
+                console.error('バックグラウンド音声停止エラー:', error);
+            }
+        }
+    }
+
+    // フォアグラウンド復帰時の処理
+    resumeFromBackground() {
+        if (this.audioManager && this.isInitialized) {
+            // 自動再開はしない（ユーザーが手動でBGMボタンを押すまで待機）
+            this.playbackStatus.innerHTML = '<span style="color: #87ceeb;">🎵 BGMボタンを押して再生を再開してください</span>';
+            console.log('フォアグラウンド復帰: 手動再開待機');
+        }
     }
 }
 
