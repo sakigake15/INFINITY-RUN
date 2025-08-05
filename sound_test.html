@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音声テスト - スマホ自動再生ポリシー対応デモ</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            background: rgba(255, 255, 255, 0.3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .info {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-top: 30px;
+        }
+
+        .device-info {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 音声テストデモ</h1>
+        
+        <div class="info">
+            このデモは、スマートフォンの自動再生ポリシーに対応した音声管理システムの動作を確認します。
+        </div>
+
+        <div id="loadingStatus" class="status">
+            <div class="loading"></div>
+            <span>音声ファイルを読み込み中...</span>
+        </div>
+
+        <div id="audioStatus" class="status" style="display: none;">
+            <span>音声の準備が完了しました！</span>
+        </div>
+
+        <div class="controls">
+            <button id="startButton" disabled>START</button>
+        </div>
+
+        <div id="playbackStatus" class="status" style="display: none;">
+            <span>BGMを再生中...</span>
+        </div>
+
+        <div class="controls" id="bgmControls" style="display: none;">
+            <button id="playChijouBtn">地上BGM</button>
+            <button id="playJigokuBtn">地獄BGM</button>
+            <button id="playFeverBtn">フィーバーBGM</button>
+            <button id="stopBtn">停止</button>
+        </div>
+
+        <div class="device-info" id="deviceInfo">
+            端末情報を取得中...
+        </div>
+    </div>
+
+    <script type="module" src="js/sound_test.js"></script>
+</body>
+</html>
