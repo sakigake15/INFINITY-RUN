@@ -241,13 +241,25 @@ export class AudioManager {
         }
     }
 
-    // 現在のBGMを停止
+    // 現在のBGMを停止（全ての音声を確実に停止）
     stopCurrentBGM() {
-        if (this.currentBGM) {
-            this.currentBGM.pause();
-            this.currentBGM.currentTime = 0;
-        }
+        // 全てのBGMを停止して確実に重複を防ぐ
+        const allBGMs = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        allBGMs.forEach(bgm => {
+            if (bgm) {
+                try {
+                    bgm.pause();
+                    bgm.currentTime = 0;
+                } catch (error) {
+                    console.log('BGM停止エラー:', error);
+                }
+            }
+        });
+        
+        this.currentBGM = null;
         this.isPlaying = false;
+        this.isFeverTime = false; // フィーバータイム状態もリセット
     }
 
     // 世界に応じてBGMを切り替え

@@ -108,6 +108,9 @@ class SoundTestDemo {
     async startBGM() {
         try {
             console.log('地上BGM再生開始');
+            // 明示的に現在のBGMを停止してから新しいBGMを再生
+            this.audioManager.stopCurrentBGM();
+            await new Promise(resolve => setTimeout(resolve, 100)); // 短い待機
             await this.audioManager.playChijouBGM();
             
             // 再生状況を表示
@@ -124,24 +127,37 @@ class SoundTestDemo {
     showBGMControls() {
         this.bgmControls.style.display = 'block';
         
-        // 各ボタンのイベントリスナーを設定
-        this.playChijouBtn.addEventListener('click', () => this.playChijouBGM());
-        this.playJigokuBtn.addEventListener('click', () => this.playJigokuBGM());
-        this.playFeverBtn.addEventListener('click', () => this.playFeverBGM());
-        this.stopBtn.addEventListener('click', () => this.stopBGM());
+        // 各ボタンのイベントリスナーを設定（重複防止のため一度だけ設定）
+        if (!this.bgmControlsInitialized) {
+            this.playChijouBtn.addEventListener('click', () => this.playChijouBGM());
+            this.playJigokuBtn.addEventListener('click', () => this.playJigokuBGM());
+            this.playFeverBtn.addEventListener('click', () => this.playFeverBGM());
+            this.stopBtn.addEventListener('click', () => this.stopBGM());
+            this.bgmControlsInitialized = true;
+        }
     }
 
     // 地上BGM再生
     async playChijouBGM() {
         if (!this.isInitialized) return;
         
+        // ボタンを一時的に無効化して重複クリックを防止
+        this.disableAllBGMButtons();
+        
         try {
+            console.log('地上BGM切り替え開始');
+            // 確実に現在のBGMを停止
+            this.audioManager.stopCurrentBGM();
+            await new Promise(resolve => setTimeout(resolve, 200)); // 停止完了待機
+            
             await this.audioManager.playChijouBGM();
             this.playbackStatus.innerHTML = '<span class="success">🌍 地上BGM再生中...</span>';
-            console.log('地上BGM再生');
+            console.log('地上BGM再生完了');
         } catch (error) {
             console.error('地上BGM再生エラー:', error);
             this.showError('地上BGMの再生に失敗しました');
+        } finally {
+            this.enableAllBGMButtons();
         }
     }
 
@@ -149,13 +165,23 @@ class SoundTestDemo {
     async playJigokuBGM() {
         if (!this.isInitialized) return;
         
+        // ボタンを一時的に無効化して重複クリックを防止
+        this.disableAllBGMButtons();
+        
         try {
+            console.log('地獄BGM切り替え開始');
+            // 確実に現在のBGMを停止
+            this.audioManager.stopCurrentBGM();
+            await new Promise(resolve => setTimeout(resolve, 200)); // 停止完了待機
+            
             await this.audioManager.playJigokuBGM();
             this.playbackStatus.innerHTML = '<span class="success">🔥 地獄BGM再生中...</span>';
-            console.log('地獄BGM再生');
+            console.log('地獄BGM再生完了');
         } catch (error) {
             console.error('地獄BGM再生エラー:', error);
             this.showError('地獄BGMの再生に失敗しました');
+        } finally {
+            this.enableAllBGMButtons();
         }
     }
 
@@ -163,13 +189,23 @@ class SoundTestDemo {
     async playFeverBGM() {
         if (!this.isInitialized) return;
         
+        // ボタンを一時的に無効化して重複クリックを防止
+        this.disableAllBGMButtons();
+        
         try {
+            console.log('フィーバーBGM切り替え開始');
+            // 確実に現在のBGMを停止
+            this.audioManager.stopCurrentBGM();
+            await new Promise(resolve => setTimeout(resolve, 200)); // 停止完了待機
+            
             await this.audioManager.startFeverTime();
             this.playbackStatus.innerHTML = '<span class="success">⚡ フィーバーBGM再生中...</span>';
-            console.log('フィーバーBGM再生');
+            console.log('フィーバーBGM再生完了');
         } catch (error) {
             console.error('フィーバーBGM再生エラー:', error);
             this.showError('フィーバーBGMの再生に失敗しました');
+        } finally {
+            this.enableAllBGMButtons();
         }
     }
 
@@ -216,6 +252,22 @@ class SoundTestDemo {
         this.audioStatus.style.display = 'block';
         this.audioStatus.innerHTML = `<span class="error">✗ ${message}</span>`;
         this.loadingStatus.style.display = 'none';
+    }
+
+    // 全BGMボタンを無効化（重複クリック防止）
+    disableAllBGMButtons() {
+        this.playChijouBtn.disabled = true;
+        this.playJigokuBtn.disabled = true;
+        this.playFeverBtn.disabled = true;
+        this.stopBtn.disabled = true;
+    }
+
+    // 全BGMボタンを有効化
+    enableAllBGMButtons() {
+        this.playChijouBtn.disabled = false;
+        this.playJigokuBtn.disabled = false;
+        this.playFeverBtn.disabled = false;
+        this.stopBtn.disabled = false;
     }
 }
 
