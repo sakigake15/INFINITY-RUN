@@ -338,26 +338,38 @@ class SoundTestDemo {
         });
     }
 
-    // バックグラウンド時の音声停止
+    // バックグラウンド時の音声停止 (Version 1.1.5 - 初期化前処理防止)
     pauseOnBackground() {
-        if (this.audioManager && this.isInitialized) {
-            try {
-                this.audioManager.stopCurrentBGM();
+        // 初期化完了前は何もしない（重要：STARTボタン押下前の誤動作防止）
+        if (!this.audioManager || !this.isInitialized) {
+            console.log('バックグラウンド処理スキップ: 音声未初期化');
+            return;
+        }
+        
+        try {
+            this.audioManager.stopCurrentBGM();
+            if (this.playbackStatus.style.display !== 'none') {
                 this.playbackStatus.innerHTML = '<span style="color: #ffa500;">⏸️ バックグラウンド時は音声を停止中</span>';
-                console.log('バックグラウンド再生防止: 音声停止');
-            } catch (error) {
-                console.error('バックグラウンド音声停止エラー:', error);
             }
+            console.log('バックグラウンド再生防止: 音声停止');
+        } catch (error) {
+            console.error('バックグラウンド音声停止エラー:', error);
         }
     }
 
-    // フォアグラウンド復帰時の処理
+    // フォアグラウンド復帰時の処理 (Version 1.1.5 - 初期化前処理防止)
     resumeFromBackground() {
-        if (this.audioManager && this.isInitialized) {
-            // 自動再開はしない（ユーザーが手動でBGMボタンを押すまで待機）
-            this.playbackStatus.innerHTML = '<span style="color: #87ceeb;">🎵 BGMボタンを押して再生を再開してください</span>';
-            console.log('フォアグラウンド復帰: 手動再開待機');
+        // 初期化完了前は何もしない（重要：STARTボタン押下前の誤動作防止）
+        if (!this.audioManager || !this.isInitialized) {
+            console.log('フォアグラウンド復帰処理スキップ: 音声未初期化');
+            return;
         }
+        
+        // 自動再開はしない（ユーザーが手動でBGMボタンを押すまで待機）
+        if (this.playbackStatus.style.display !== 'none') {
+            this.playbackStatus.innerHTML = '<span style="color: #87ceeb;">🎵 BGMボタンを押して再生を再開してください</span>';
+        }
+        console.log('フォアグラウンド復帰: 手動再開待機');
     }
 }
 

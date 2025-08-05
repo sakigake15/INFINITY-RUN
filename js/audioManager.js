@@ -145,7 +145,7 @@ export class AudioManager {
         }
     }
 
-    // Android専用音声初期化
+    // Android専用音声初期化 (Version 1.1.4 - Android音量問題対応)
     async initializeAndroidAudio() {
         const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
         
@@ -154,35 +154,64 @@ export class AudioManager {
                 console.log('Android音声準備開始:', audio.src);
                 
                 // Android Chromeでの音声準備手順
-                audio.preload = 'metadata';
+                audio.preload = 'auto'; // metadataではなくautoに変更
                 audio.load();
                 
-                // 音量を一時的に0にして再生テスト
-                const originalVolume = audio.volume;
-                audio.volume = 0.01; // 完全に0にするとAndroidで問題が起きることがある
+                // Android固有の設定
+                audio.setAttribute('controls', 'false');
+                audio.setAttribute('autoplay', 'false');
                 
-                // 再生を試行
-                const playPromise = audio.play();
-                if (playPromise !== undefined) {
-                    await playPromise;
-                    console.log('Android音声再生成功:', audio.src);
+                // 音量設定の確実な適用
+                const originalVolume = audio.volume;
+                audio.volume = 0; // 初期化時は完全に無音
+                audio.muted = false; // mutedは使わない（Androidで問題あり）
+                
+                // 複数回の再生試行でAndroidの問題を回避
+                let playSuccess = false;
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        console.log(`Android音声再生試行 ${attempt}/3:`, audio.src);
+                        
+                        const playPromise = audio.play();
+                        if (playPromise !== undefined) {
+                            await playPromise;
+                            console.log(`Android音声再生成功 (試行${attempt}):`, audio.src);
+                            playSuccess = true;
+                            break;
+                        }
+                    } catch (playError) {
+                        console.log(`Android音声再生試行${attempt}失敗:`, audio.src, playError);
+                        if (attempt < 3) {
+                            await new Promise(resolve => setTimeout(resolve, 200));
+                        }
+                    }
                 }
                 
-                // すぐに停止
+                // 停止と音量復旧
                 audio.pause();
                 audio.currentTime = 0;
                 audio.volume = originalVolume;
                 
-                console.log('Android音声準備完了:', audio.src);
+                if (playSuccess) {
+                    console.log('Android音声準備完了:', audio.src);
+                } else {
+                    console.log('Android音声準備失敗（全試行終了）:', audio.src);
+                }
                 
-                // 各音声ファイル間に少し待機
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // 各音声ファイル間に長めの待機
+                await new Promise(resolve => setTimeout(resolve, 300));
                 
             } catch (error) {
                 console.log('Android音声準備エラー:', audio.src, error);
                 // エラーが発生しても他の音声ファイルの準備を継続
             }
         }
+        
+        // 最終確認：全ての音声ファイルのreadyStateをチェック
+        console.log('=== Android音声準備状況確認 ===');
+        audioFiles.forEach((audio, index) => {
+            console.log(`音声${index + 1} (${audio.src}): readyState=${audio.readyState}, volume=${audio.volume}`);
+        });
     }
 
     // iOS専用音声初期化
