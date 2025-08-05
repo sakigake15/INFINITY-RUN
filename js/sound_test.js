@@ -69,9 +69,9 @@ class SoundTestDemo {
         this.startButton.addEventListener('click', () => this.onStartClick());
     }
 
-    // STARTボタンクリック時の処理
+    // STARTボタンクリック時の処理 (Version 1.1.1 - ボタン状態修正)
     async onStartClick() {
-        console.log('STARTボタンがクリックされました');
+        console.log('STARTボタンがクリックされました - Version 1.1.1');
         
         try {
             // ボタンを無効化
@@ -79,20 +79,29 @@ class SoundTestDemo {
             this.startButton.textContent = '初期化中...';
             
             // AudioManagerの音声初期化を実行（ユーザーインタラクション後）
+            console.log('音声初期化開始...');
             await this.audioManager.initializeAudio();
             
             console.log('音声初期化完了');
+            
+            // ボタンテキストを更新（重要：この処理が不足していた）
+            this.startButton.textContent = '初期化完了✓';
             
             // UIを更新
             this.audioStatus.innerHTML = '<span class="success">✓ 音声コンテキストが有効化されました！</span>';
             
             // BGM再生開始
+            console.log('BGM再生準備...');
             await this.startBGM();
             
             // BGMコントロールを表示
             this.showBGMControls();
             
+            // ボタンを非表示にして、初期化完了を明確に示す
+            this.startButton.style.display = 'none';
+            
             this.isInitialized = true;
+            console.log('全ての初期化処理完了');
             
         } catch (error) {
             console.error('音声初期化エラー:', error);
@@ -223,7 +232,7 @@ class SoundTestDemo {
         }
     }
 
-    // 端末情報を表示
+    // 端末情報を表示（Version 1.1.0 - 詳細情報追加）
     displayDeviceInfo() {
         const userAgent = navigator.userAgent;
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
@@ -231,20 +240,38 @@ class SoundTestDemo {
         const isAndroid = /Android/i.test(userAgent);
         
         let deviceType = 'デスクトップ';
+        let deviceIcon = '🖥️';
         if (isIOS) {
             deviceType = 'iOS';
+            deviceIcon = '📱';
         } else if (isAndroid) {
             deviceType = 'Android';
+            deviceIcon = '🤖';
         } else if (isMobile) {
             deviceType = 'モバイル';
+            deviceIcon = '📱';
         }
         
         const audioContextSupport = window.AudioContext || window.webkitAudioContext ? '✓' : '✗';
         
+        // Chrome バージョン情報（Android音声問題のデバッグ用）
+        const chromeMatch = userAgent.match(/Chrome\/(\d+)/);
+        const chromeVersion = chromeMatch ? chromeMatch[1] : 'N/A';
+        
         this.deviceInfo.innerHTML = `
-            端末: ${deviceType} | AudioContext: ${audioContextSupport}<br>
-            ${isMobile ? '📱 モバイル端末での自動再生ポリシー対応' : '🖥️ デスクトップ環境'}
+            ${deviceIcon} 端末: ${deviceType} | AudioContext: ${audioContextSupport}<br>
+            Chrome: v${chromeVersion} | ${isMobile ? 'モバイル自動再生ポリシー対応' : 'デスクトップ環境'}<br>
+            <small style="opacity: 0.7;">Version 1.1.0 - Android音声特別対応</small>
         `;
+        
+        // デバッグ用コンソール出力
+        console.log('=== 端末情報デバッグ (Version 1.1.0) ===');
+        console.log('UserAgent:', userAgent);
+        console.log('isMobile:', isMobile);
+        console.log('isAndroid:', isAndroid);
+        console.log('isIOS:', isIOS);
+        console.log('Chrome Version:', chromeVersion);
+        console.log('AudioContext Support:', audioContextSupport);
     }
 
     // エラー表示

@@ -36,6 +36,7 @@ export class AudioManager {
         // モバイル検出
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        this.isAndroid = /Android/i.test(navigator.userAgent);
         
         this.initializeAudioContext();
         this.setupTouchUnlock();
@@ -105,39 +106,145 @@ export class AudioManager {
         }
     }
 
-    // ユーザーインタラクション後の音声初期化（シンプル版）
+    // ユーザーインタラクション後の音声初期化（Android対応強化版）
     async initializeAudio() {
         if (this.isInitialized) return;
         
         try {
-            console.log('音声初期化開始');
+            console.log('音声初期化開始 - Version 1.1.0');
             
             // AudioContextの状態確認・復旧
             if (this.audioContext && this.audioContext.state === 'suspended') {
                 await this.audioContext.resume();
+                console.log('AudioContext resumed');
             }
             
-            // モバイルでの音声準備
+            // Android特別対応
             if (this.isMobile) {
-                const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
-                
-                for (const audio of audioFiles) {
-                    try {
-                        audio.muted = true;
-                        await audio.play();
-                        audio.pause();
-                        audio.muted = false;
-                        audio.currentTime = 0;
-                    } catch (error) {
-                        console.log('音声準備エラー:', error);
-                    }
+                if (this.isAndroid) {
+                    console.log('Android端末での音声初期化');
+                    await this.initializeAndroidAudio();
+                } else if (this.isIOS) {
+                    console.log('iOS端末での音声初期化');
+                    await this.initializeIOSAudio();
+                } else {
+                    console.log('その他モバイル端末での音声初期化');
+                    await this.initializeGenericMobileAudio();
                 }
+            } else {
+                console.log('デスクトップ環境での音声初期化');
+                await this.initializeDesktopAudio();
             }
             
             this.isInitialized = true;
             console.log('音声初期化完了');
         } catch (error) {
             console.log('音声初期化エラー:', error);
+            throw error; // エラーを上位に伝播させてUIで表示
+        }
+    }
+
+    // Android専用音声初期化
+    async initializeAndroidAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                console.log('Android音声準備開始:', audio.src);
+                
+                // Android Chromeでの音声準備手順
+                audio.preload = 'metadata';
+                audio.load();
+                
+                // 音量を一時的に0にして再生テスト
+                const originalVolume = audio.volume;
+                audio.volume = 0.01; // 完全に0にするとAndroidで問題が起きることがある
+                
+                // 再生を試行
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    await playPromise;
+                    console.log('Android音声再生成功:', audio.src);
+                }
+                
+                // すぐに停止
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = originalVolume;
+                
+                console.log('Android音声準備完了:', audio.src);
+                
+                // 各音声ファイル間に少し待機
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+            } catch (error) {
+                console.log('Android音声準備エラー:', audio.src, error);
+                // エラーが発生しても他の音声ファイルの準備を継続
+            }
+        }
+    }
+
+    // iOS専用音声初期化
+    async initializeIOSAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                console.log('iOS音声準備開始:', audio.src);
+                
+                audio.load();
+                
+                const originalVolume = audio.volume;
+                audio.volume = 0;
+                audio.muted = true;
+                
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                
+                audio.muted = false;
+                audio.volume = originalVolume;
+                
+                console.log('iOS音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('iOS音声準備エラー:', audio.src, error);
+            }
+        }
+    }
+
+    // その他モバイル端末用音声初期化
+    async initializeGenericMobileAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                console.log('モバイル音声準備開始:', audio.src);
+                
+                audio.muted = true;
+                await audio.play();
+                audio.pause();
+                audio.muted = false;
+                audio.currentTime = 0;
+                
+                console.log('モバイル音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('モバイル音声準備エラー:', audio.src, error);
+            }
+        }
+    }
+
+    // デスクトップ用音声初期化
+    async initializeDesktopAudio() {
+        const audioFiles = [this.chijouBGM, this.jigokuBGM, this.feverBGM];
+        
+        for (const audio of audioFiles) {
+            try {
+                console.log('デスクトップ音声準備開始:', audio.src);
+                audio.load();
+                console.log('デスクトップ音声準備完了:', audio.src);
+            } catch (error) {
+                console.log('デスクトップ音声準備エラー:', audio.src, error);
+            }
         }
     }
 
