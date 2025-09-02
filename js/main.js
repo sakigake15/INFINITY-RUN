@@ -8,6 +8,7 @@ import { SoundEffectManager } from './soundEffectManager.js';
 import { ParticleSystem } from './particleSystem.js';
 import { RankingManager } from './rankingManager.js';
 import { RankingDisplay } from './rankingDisplay.js';
+import { NameInputDialog } from './nameInputDialog.js';
 
 class Game {
     constructor() {
@@ -37,9 +38,10 @@ class Game {
         );
 
         // ランキングシステムの初期化
-        this.rankingApiUrl = 'https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec';
+        this.rankingApiUrl = 'https://script.google.com/macros/s/AKfycbyDqtxsRSiQdDVhTy53EqzqDuGWaCObw9Ztf7WT8Tskua5Gteu4pq3w_GslvBgBq-5I/exec';
         this.rankingManager = new RankingManager(this.rankingApiUrl);
         this.rankingDisplay = new RankingDisplay();
+        this.nameInputDialog = new NameInputDialog();
 
         // 音声初期化フラグ（Version 1.1.5対応）
         this.isAudioInitialized = false;
@@ -125,13 +127,9 @@ class Game {
         this.rankingDisplay.showLoading();
         
         try {
-            // ランキングデータを取得（キャッシュがあればそれを使用、なければ新規取得）
-            let rankingData = this.rankingManager.getCachedRanking();
-            
-            if (!rankingData || !this.rankingManager.isCacheValid()) {
-                console.log('ランキングデータを新規取得中...');
-                rankingData = await this.rankingManager.fetchRanking();
-            }
+            // 最新のランキングデータを取得
+            console.log('最新ランキングデータを取得中...');
+            const rankingData = await this.rankingManager.fetchRanking();
             
             if (rankingData) {
                 // ランキングデータを表示
@@ -140,13 +138,21 @@ class Game {
                 
                 // ユーザーの順位を計算・表示
                 if (finalScore > 0) {
-                    const userRank = this.rankingManager.getUserRank(finalScore);
+                    const userRank = this.rankingManager.getUserRank(finalScore, rankingData);
                     this.rankingDisplay.showUserRank(finalScore, rankingData);
                     
-                    if (userRank && userRank <= 5) {
+                    // 5位以内チェック
+                    const shouldPost = this.rankingManager.shouldPostToRanking(finalScore, rankingData);
+                    
+                    if (shouldPost.shouldPost) {
                         console.log(`ランキング入り可能: ${userRank}位 (スコア: ${finalScore})`);
+                        console.log(`投稿理由: ${shouldPost.reason}`);
+                        
+                        // 名前入力ダイアログを表示
+                        await this.showNameInputDialog(finalScore);
                     } else {
                         console.log(`ランキング外: ${userRank ? userRank + '位' : '圏外'} (スコア: ${finalScore})`);
+                        console.log(`投稿不可理由: ${shouldPost.reason}`);
                     }
                 }
             } else {
@@ -157,6 +163,147 @@ class Game {
         } catch (error) {
             console.error('ゲーム終了時ランキング処理エラー:', error);
             this.rankingDisplay.showError('ランキングの表示中にエラーが発生しました');
+        }
+    }
+
+    /**
+     * 名前入力ダイアログを表示してスコアを投稿
+     * @param {number} score - 投稿するスコア
+     */
+    async showNameInputDialog(score) {
+        return new Promise((resolve) => {
+            this.nameInputDialog.show(
+                // 投稿ボタンが押された時の処理
+                async (playerName) => {
+                    console.log(`スコア投稿開始: ${playerName} - ${score}点`);
+                    
+                    try {
+                        // 投稿中のフィードバック表示
+                        this.showPostingFeedback('投稿中...', 'info');
+                        
+                        // スコアを投稿
+                        const result = await this.rankingManager.postScore(score, playerName);
+                        
+                        if (result.success) {
+                            console.log('スコア投稿成功:', result);
+                            this.showPostingFeedback(
+                                `投稿完了！ ${result.rank}位にランクインしました！`, 
+                                'success'
+                            );
+                            
+                            // ランキングを更新表示
+                            await this.sleep(1500); // 待機
+                            await this.refreshRanking();
+                        } else {
+                            console.error('スコア投稿失敗:', result.message);
+                            this.showPostingFeedback(
+                                `投稿失敗: ${result.message}`, 
+                                'error'
+                            );
+                        }
+                    } catch (error) {
+                        console.error('スコア投稿エラー:', error);
+                        this.showPostingFeedback(
+                            '投稿中にエラーが発生しました', 
+                            'error'
+                        );
+                    }
+                    
+                    // ダイアログを閉じる
+                    this.nameInputDialog.hide();
+                    resolve();
+                },
+                // キャンセルボタンが押された時の処理
+                () => {
+                    console.log('スコア投稿をキャンセルしました');
+                    resolve();
+                }
+            );
+        });
+    }
+
+    /**
+     * 投稿状況のフィードバックを表示
+     * @param {string} message - 表示メッセージ
+     * @param {string} type - メッセージタイプ ('info', 'success', 'error')
+     */
+    showPostingFeedback(message, type) {
+        // 既存のフィードバック要素があれば削除
+        const existingFeedback = document.getElementById('posting-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+
+        // フィードバック要素を作成
+        const feedback = document.createElement('div');
+        feedback.id = 'posting-feedback';
+        feedback.className = `posting-feedback ${type}`;
+        feedback.textContent = message;
+
+        // スタイルを適用
+        feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10001;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+        `;
+
+        // タイプ別のスタイル
+        switch (type) {
+            case 'info':
+                feedback.style.background = '#2196F3';
+                feedback.style.color = '#ffffff';
+                break;
+            case 'success':
+                feedback.style.background = '#4CAF50';
+                feedback.style.color = '#ffffff';
+                break;
+            case 'error':
+                feedback.style.background = '#f44336';
+                feedback.style.color = '#ffffff';
+                break;
+        }
+
+        // DOMに追加
+        document.body.appendChild(feedback);
+
+        // アニメーション表示
+        setTimeout(() => {
+            feedback.style.opacity = '1';
+        }, 10);
+
+        // 自動で消去（エラー以外の場合）
+        if (type !== 'error') {
+            setTimeout(() => {
+                if (feedback.parentNode) {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => {
+                        if (feedback.parentNode) {
+                            feedback.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        } else {
+            // エラーメッセージは長めに表示
+            setTimeout(() => {
+                if (feedback.parentNode) {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => {
+                        if (feedback.parentNode) {
+                            feedback.remove();
+                        }
+                    }, 300);
+                }
+            }, 5000);
         }
     }
 
@@ -202,6 +349,15 @@ class Game {
             this.particleSystem.update();
         }
         this.sceneManager.render();
+    }
+
+    /**
+     * 指定時間待機
+     * @param {number} ms - 待機時間（ミリ秒）
+     * @return {Promise}
+     */
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     // バックグラウンド再生防止の設定（Version 1.1.5 - メインゲーム対応）

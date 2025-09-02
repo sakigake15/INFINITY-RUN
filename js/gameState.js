@@ -44,7 +44,11 @@ export class GameState {
         this.isGameStarted = false;
         this.obstacleSpeed = 0.2;
         this.money = 0;
-        this.initScore();
+        
+        // スコアを0にリセット
+        this.score = 0;
+        document.getElementById('currentScore').textContent = '0';
+        document.getElementById('scoreDisplay').classList.add('hidden');
 
         // ゲームオーバー画面を非表示
         document.getElementById('gameOverScreen').classList.add('hidden');

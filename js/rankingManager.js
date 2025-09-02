@@ -5,10 +5,7 @@
 export class RankingManager {
     constructor(apiUrl) {
         this.apiUrl = apiUrl;
-        this.cachedRanking = null;
         this.isLoading = false;
-        this.lastFetchTime = 0;
-        this.cacheTimeout = 60000; // 1分キャッシュ
         this.requestTimeout = 10000; // 10秒タイムアウト
         this.retryCount = 0;
         this.maxRetries = 3;
@@ -17,28 +14,28 @@ export class RankingManager {
     }
 
     /**
-     * ランキングデータを非同期で取得
-     * @param {boolean} forceRefresh - キャッシュを無視して強制更新
+     * ランキングデータを非同期で取得（常に最新データを取得）
+     * @param {boolean} forceRefresh - 互換性のため残すが使用しない
      * @return {Promise<Object|null>} ランキングデータまたはnull
      */
     async fetchRanking(forceRefresh = false) {
         // 既に読み込み中の場合は重複リクエストを防ぐ
         if (this.isLoading) {
             console.log('ランキング取得中のため、リクエストをスキップ');
-            return this.cachedRanking;
-        }
-
-        // キャッシュが有効かチェック
-        const now = Date.now();
-        const cacheIsValid = this.cachedRanking && 
-            (now - this.lastFetchTime) < this.cacheTimeout;
-
-        if (!forceRefresh && cacheIsValid) {
-            console.log('キャッシュされたランキングデータを返します');
-            return this.cachedRanking;
+            await this.waitForLoading();
         }
 
         return await this.fetchRankingFromAPI();
+    }
+
+    /**
+     * ローディング完了まで待機
+     * @return {Promise}
+     */
+    async waitForLoading() {
+        while (this.isLoading) {
+            await this.sleep(100);
+        }
     }
 
     /**
@@ -78,10 +75,8 @@ export class RankingManager {
                 throw new Error('無効なランキングデータ形式');
             }
 
-            // データの正規化とキャッシュ更新
+            // データの正規化
             const normalizedData = this.normalizeRankingData(data);
-            this.cachedRanking = normalizedData;
-            this.lastFetchTime = Date.now();
             this.retryCount = 0; // 成功時はリトライカウントをリセット
 
             console.log('ランキングデータ取得成功:', normalizedData);
@@ -100,12 +95,6 @@ export class RankingManager {
                 await this.sleep(delay);
                 
                 return await this.fetchRankingFromAPI();
-            }
-
-            // 全てのリトライが失敗した場合、古いキャッシュを返す
-            if (this.cachedRanking) {
-                console.log('エラーのため古いキャッシュデータを返します');
-                return this.cachedRanking;
             }
 
             return null;
@@ -243,25 +232,6 @@ export class RankingManager {
     }
 
     /**
-     * キャッシュされたランキングデータを取得
-     * @return {Object|null}
-     */
-    getCachedRanking() {
-        return this.cachedRanking;
-    }
-
-    /**
-     * キャッシュの有効性をチェック
-     * @return {boolean}
-     */
-    isCacheValid() {
-        if (!this.cachedRanking) return false;
-        
-        const now = Date.now();
-        return (now - this.lastFetchTime) < this.cacheTimeout;
-    }
-
-    /**
      * ローディング状態を取得
      * @return {boolean}
      */
@@ -270,25 +240,23 @@ export class RankingManager {
     }
 
     /**
-     * キャッシュをクリア
-     */
-    clearCache() {
-        this.cachedRanking = null;
-        this.lastFetchTime = 0;
-        console.log('ランキングキャッシュをクリアしました');
-    }
-
-    /**
      * ユーザーのランキング内順位を取得
      * @param {number} userScore - ユーザーのスコア
+     * @param {Object} rankingData - ランキングデータ
      * @return {number|null} 順位（1-based）またはnull（ランキング外）
      */
-    getUserRank(userScore) {
-        if (!this.cachedRanking || !this.cachedRanking.ranking) {
+    getUserRank(userScore, rankingData = null) {
+        // ランキングデータが渡されていない場合は最新データを取得
+        if (!rankingData) {
+            console.log('ランキングデータが提供されていないため、順位計算をスキップ');
             return null;
         }
 
-        const ranking = this.cachedRanking.ranking;
+        if (!rankingData.ranking) {
+            return null;
+        }
+
+        const ranking = rankingData.ranking;
         for (let i = 0; i < ranking.length; i++) {
             if (userScore >= ranking[i].score) {
                 return i + 1;
@@ -315,6 +283,225 @@ export class RankingManager {
      */
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * スコアをランキングに投稿
+     * @param {number} score - スコア
+     * @param {string} name - プレイヤー名
+     * @return {Promise<Object>} 投稿結果
+     */
+    async postScore(score, name) {
+        console.log('スコア投稿開始:', { score, name });
+
+        try {
+            // 名前のバリデーション
+            const nameValidation = this.validatePlayerName(name);
+            if (!nameValidation.isValid) {
+                throw new Error(nameValidation.error);
+            }
+
+            // スコアのバリデーション
+            if (!score || score <= 0 || !Number.isInteger(score)) {
+                throw new Error('スコアは正の整数である必要があります');
+            }
+
+            // まずランキングを取得して5位以内かチェック
+            const currentRanking = await this.fetchRanking(true); // 強制更新
+            const shouldPost = this.shouldPostToRanking(score, currentRanking);
+            
+            if (!shouldPost.shouldPost) {
+                return {
+                    success: false,
+                    message: shouldPost.reason,
+                    rank: null
+                };
+            }
+
+            // JSONP方式でスコアを送信（CORSエラー回避）
+            console.log('JSONP方式でスコア投稿を実行...');
+            const result = await this.postScoreWithJSONP(score, name);
+            
+            if (result.success) {
+                console.log('スコア投稿成功:', result);
+                
+                // 少し待ってから最新データを取得（サーバー側の処理完了を待つ）
+                await this.sleep(1000);
+                
+                return {
+                    success: true,
+                    message: result.message,
+                    rank: result.rank
+                };
+            } else {
+                throw new Error(result.error || 'スコア投稿に失敗しました');
+            }
+
+        } catch (error) {
+            console.error('スコア投稿エラー:', error);
+            return {
+                success: false,
+                message: error.message,
+                rank: null
+            };
+        }
+    }
+
+    /**
+     * JSONP方式でスコアを投稿
+     * @param {number} score - スコア
+     * @param {string} name - プレイヤー名
+     * @return {Promise<Object>}
+     */
+    postScoreWithJSONP(score, name) {
+        return new Promise((resolve, reject) => {
+            // ユニークなコールバック名を生成
+            const callbackName = 'postCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // タイムアウト設定
+            const timeoutId = setTimeout(() => {
+                this.cleanupJSONP(callbackName);
+                reject(new Error('スコア投稿タイムアウト'));
+            }, this.requestTimeout);
+
+            // グローバルコールバック関数を定義
+            window[callbackName] = (data) => {
+                clearTimeout(timeoutId);
+                console.log('JSONP投稿レスポンス受信:', data);
+                this.cleanupJSONP(callbackName);
+                
+                // レスポンスの検証
+                if (data && typeof data === 'object') {
+                    console.log('レスポンス詳細:', {
+                        success: data.success,
+                        message: data.message,
+                        error: data.error,
+                        rank: data.rank
+                    });
+                    
+                    // レスポンスが空の場合はエラー処理
+                    if (data.success === undefined && data.error === undefined) {
+                        console.error('空のレスポンスを受信:', data);
+                        reject(new Error('Google Apps Scriptから無効なレスポンスが返されました'));
+                    } else {
+                        resolve(data);
+                    }
+                } else {
+                    console.error('無効なレスポンス形式:', data);
+                    reject(new Error('無効なレスポンス形式'));
+                }
+            };
+
+            // URLパラメータとしてスコアと名前を送信
+            const url = `${this.apiUrl}?callback=${callbackName}&action=post&score=${encodeURIComponent(score)}&name=${encodeURIComponent(name)}&_=${Date.now()}`;
+            
+            // スクリプトタグを作成してJSONPリクエストを送信
+            const script = document.createElement('script');
+            script.src = url;
+            script.onerror = () => {
+                clearTimeout(timeoutId);
+                this.cleanupJSONP(callbackName);
+                reject(new Error('スコア投稿スクリプトロードエラー'));
+            };
+
+            console.log('スコア投稿URL:', url);
+            
+            // スクリプトをDOMに追加
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * ランキングに投稿すべきかどうかを判定
+     * @param {number} score - スコア
+     * @param {Object} rankingData - 現在のランキングデータ
+     * @return {Object} 判定結果
+     */
+    shouldPostToRanking(score, rankingData) {
+        if (!rankingData || !rankingData.ranking) {
+            // ランキングデータが取得できない場合は投稿を試す
+            return {
+                shouldPost: true,
+                reason: 'ランキングデータを確認中...'
+            };
+        }
+
+        const ranking = rankingData.ranking;
+        
+        // ランキングが5件未満の場合は投稿する
+        if (ranking.length < 5) {
+            return {
+                shouldPost: true,
+                reason: 'ランキングに空きがあります'
+            };
+        }
+
+        // 5位のスコアと比較
+        const fifthScore = ranking[4].score;
+        if (score > fifthScore) {
+            return {
+                shouldPost: true,
+                reason: `5位のスコア(${fifthScore})を上回っています`
+            };
+        }
+
+        return {
+            shouldPost: false,
+            reason: `スコアが5位のスコア(${fifthScore})以下のため、ランキングに登録されません`
+        };
+    }
+
+    /**
+     * プレイヤー名のバリデーション
+     * @param {string} name - プレイヤー名
+     * @return {Object} バリデーション結果
+     */
+    validatePlayerName(name) {
+        // null, undefinedチェック
+        if (name === null || name === undefined) {
+            return {
+                isValid: false,
+                error: '名前が指定されていません'
+            };
+        }
+
+        // 文字列チェック
+        if (typeof name !== 'string') {
+            return {
+                isValid: false,
+                error: '名前は文字列である必要があります'
+            };
+        }
+
+        // 空文字チェック
+        if (name.trim() === '') {
+            return {
+                isValid: false,
+                error: '名前を入力してください'
+            };
+        }
+
+        // 長さチェック（10文字以下）
+        if (name.length > 10) {
+            return {
+                isValid: false,
+                error: '名前は10文字以内で入力してください'
+            };
+        }
+
+        // 半角英数字のみチェック
+        const alphanumericPattern = /^[a-zA-Z0-9]+$/;
+        if (!alphanumericPattern.test(name)) {
+            return {
+                isValid: false,
+                error: '名前は半角英数字のみ使用できます'
+            };
+        }
+
+        return {
+            isValid: true,
+            error: null
+        };
     }
 
     /**

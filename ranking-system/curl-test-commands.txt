@@ -1,0 +1,120 @@
+# ランキングシステム - curlテストコマンド集
+
+## Web App URL
+https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec
+
+## ランキング取得テスト（GET）
+
+### 基本的なランキング取得
+curl "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec"
+
+### より明示的なGETリクエスト
+curl -X GET "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec"
+
+## スコア登録テスト（POST）
+
+### 成功例 - 高スコア登録
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1500, "name": "testplayer"}'
+
+### 成功例 - 通常スコア登録
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1200, "name": "newplayer"}'
+
+### 成功例 - ギリギリのスコア
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 601, "name": "rookie"}'
+
+## エラーテスト
+
+### 無効なスコア（文字列）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": "abc", "name": "testplayer"}'
+
+### 無効なスコア（負の数）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": -100, "name": "testplayer"}'
+
+### 無効なスコア（小数）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 100.5, "name": "testplayer"}'
+
+### 無効な名前（大文字含む）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1000, "name": "TestPlayer"}'
+
+### 無効な名前（数字含む）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1000, "name": "player123"}'
+
+### 無効な名前（特殊文字含む）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1000, "name": "player-test"}'
+
+### 空の名前
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1000, "name": ""}'
+
+### 低すぎるスコア（5位以下）
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 100, "name": "lowscore"}'
+
+## 連続テスト例
+
+### 複数プレイヤーの登録テスト
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1800, "name": "champion"}' && \
+curl -X POST "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" \
+  -H "Content-Type: application/json" \
+  -d '{"score": 1300, "name": "challenger"}' && \
+curl "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec"
+
+## レスポンス確認のためのオプション
+
+### レスポンスヘッダーも表示
+curl -i "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec"
+
+### 詳細な実行情報を表示
+curl -v "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec"
+
+### JSONレスポンスを整形して表示（jqが利用可能な場合）
+curl "https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec" | jq
+
+## 期待されるレスポンス例
+
+### ランキング取得成功時
+{
+  "success": true,
+  "ranking": [
+    {"rank": 1, "score": 1000, "name": "alice", "date": "2024-01-01 00:00:00"},
+    {"rank": 2, "score": 900, "name": "bob", "date": "2024-01-02 00:00:00"},
+    {"rank": 3, "score": 800, "name": "charlie", "date": "2024-01-03 00:00:00"},
+    {"rank": 4, "score": 700, "name": "david", "date": "2024-01-04 00:00:00"},
+    {"rank": 5, "score": 600, "name": "eve", "date": "2024-01-05 00:00:00"}
+  ]
+}
+
+### スコア登録成功時
+{
+  "success": true,
+  "message": "ランキングに登録されました",
+  "rank": 3
+}
+
+### エラー時
+{
+  "success": false,
+  "error": "スコアは正の整数である必要があります"
+}
