@@ -14,7 +14,25 @@
 
     <!-- タイトル画面 -->
     <div id="titleScreen" class="title-screen">
-        <button id="startButton">GAME START</button>
+        <div class="title-content">
+            <h1 class="game-title">INFINITY-RUN</h1>
+            <button id="startButton">GAME START</button>
+        </div>
+        
+        <!-- ランキング表示エリア -->
+        <div class="ranking-section">
+            <h2 class="ranking-title">TOP 5 RANKING</h2>
+            <div id="rankingDisplay" class="ranking-display">
+                <div class="ranking-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading...</p>
+                </div>
+            </div>
+            <div id="rankingError" class="ranking-error hidden">
+                <p>ランキングの取得に失敗しました</p>
+                <button id="refreshRanking" class="refresh-button">再読み込み</button>
+            </div>
+        </div>
     </div>
     
     <!-- スコア表示 -->
