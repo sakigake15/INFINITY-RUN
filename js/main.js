@@ -6,6 +6,8 @@ import { InputHandler } from './input.js';
 import { HowlerSoundManager } from './howlerSoundManager.js';
 import { SoundEffectManager } from './soundEffectManager.js';
 import { ParticleSystem } from './particleSystem.js';
+import { RankingManager } from './rankingManager.js';
+import { RankingDisplay } from './rankingDisplay.js';
 
 class Game {
     constructor() {
@@ -25,11 +27,19 @@ class Game {
             this.soundEffectManager,
             this.particleSystem
         );
+        
+        // ObstacleManagerにGameインスタンスの参照を設定
+        this.obstacleManager.setGameInstance(this);
         this.inputHandler = new InputHandler(
             this.gameState,
             this.sceneManager.getLaneWidth(),
             this.sceneManager
         );
+
+        // ランキングシステムの初期化
+        this.rankingApiUrl = 'https://script.google.com/macros/s/AKfycbzD_bxklwWbJpuAn_HZfPP7XKXfLIHkpTYKfqzPVw1jI1-eRkGLmy_NTmzpwuDzXmOT/exec';
+        this.rankingManager = new RankingManager(this.rankingApiUrl);
+        this.rankingDisplay = new RankingDisplay();
 
         // 音声初期化フラグ（Version 1.1.5対応）
         this.isAudioInitialized = false;
@@ -43,6 +53,7 @@ class Game {
         this.setupBackgroundPlayPrevention();
         
         this.setupEventListeners();
+        this.initializeRanking();
         this.animate();
     }
 
@@ -68,6 +79,99 @@ class Game {
                 this.startGame();
             }
         });
+
+        // ランキング再読み込みボタンのイベントリスナー
+        this.rankingDisplay.setRefreshCallback(() => {
+            this.refreshRanking();
+        });
+    }
+
+    /**
+     * ランキングシステムを初期化
+     */
+    async initializeRanking() {
+        console.log('ランキングシステム初期化開始');
+        
+        // ローディング状態を表示
+        this.rankingDisplay.showLoading();
+        
+        try {
+            // バックグラウンドでランキングデータを取得
+            const rankingData = await this.rankingManager.fetchRanking();
+            
+            if (rankingData) {
+                // ランキングデータを表示
+                this.rankingDisplay.displayRanking(rankingData);
+                console.log('ランキング初期化完了');
+                
+                // ユーザーのハイスコアがランキング内にある場合はハイライト
+                const userHighScore = this.gameState.highScore;
+                if (userHighScore > 0) {
+                    this.rankingDisplay.showUserRank(userHighScore, rankingData);
+                }
+            } else {
+                // エラー状態を表示
+                this.rankingDisplay.showError('ランキングデータの取得に失敗しました');
+                console.error('ランキング初期化失敗');
+            }
+        } catch (error) {
+            console.error('ランキング初期化エラー:', error);
+            this.rankingDisplay.showError('ランキングシステムの初期化に失敗しました');
+        }
+    }
+
+    /**
+     * ランキングデータを手動で更新
+     */
+    async refreshRanking() {
+        console.log('ランキング手動更新開始');
+        
+        // ローディング状態を表示
+        this.rankingDisplay.showLoading();
+        
+        try {
+            // 強制的にデータを再取得
+            const rankingData = await this.rankingManager.fetchRanking(true);
+            
+            if (rankingData) {
+                this.rankingDisplay.displayRanking(rankingData);
+                console.log('ランキング手動更新完了');
+                
+                // ユーザーのハイスコアがランキング内にある場合はハイライト
+                const userHighScore = this.gameState.highScore;
+                if (userHighScore > 0) {
+                    this.rankingDisplay.showUserRank(userHighScore, rankingData);
+                }
+            } else {
+                this.rankingDisplay.showError('ランキングデータの更新に失敗しました');
+            }
+        } catch (error) {
+            console.error('ランキング手動更新エラー:', error);
+            this.rankingDisplay.showError('ランキングの更新中にエラーが発生しました');
+        }
+    }
+
+    /**
+     * ゲーム終了時のランキング関連処理
+     */
+    async handleGameEndRanking() {
+        const finalScore = this.gameState.score;
+        
+        // キャッシュされたランキングデータを取得
+        const rankingData = this.rankingManager.getCachedRanking();
+        
+        if (rankingData && finalScore > 0) {
+            // ユーザーの順位を計算・表示
+            const userRank = this.rankingManager.getUserRank(finalScore);
+            
+            if (userRank && userRank <= 5) {
+                console.log(`ランキング入り可能: ${userRank}位 (スコア: ${finalScore})`);
+                // 将来的にはここでスコア送信ダイアログを表示
+                // 現在は表示のみ
+            } else {
+                console.log(`ランキング外: ${userRank ? userRank + '位' : '圏外'} (スコア: ${finalScore})`);
+            }
+        }
     }
 
     async startGame() {

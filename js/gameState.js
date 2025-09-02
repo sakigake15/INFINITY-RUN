@@ -58,7 +58,7 @@ export class GameState {
         return false; // 世界は切り替わっていない
     }
 
-    handleGameOver(player, runningAction, audioManager = null) {
+    handleGameOver(player, runningAction, audioManager = null, gameInstance = null) {
         this.isGameOver = true;
         this.obstacleSpeed = 0;
 
@@ -91,6 +91,11 @@ export class GameState {
         this.updateHighScore();
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOverScreen').classList.remove('hidden');
+
+        // ランキング関連処理を実行
+        if (gameInstance && gameInstance.handleGameEndRanking) {
+            gameInstance.handleGameEndRanking();
+        }
     }
 
     // スコアとマネーの更新

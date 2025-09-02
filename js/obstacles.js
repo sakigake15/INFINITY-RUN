@@ -8,6 +8,7 @@ export class ObstacleManager {
         this.audioManager = audioManager;
         this.soundEffectManager = soundEffectManager;
         this.particleSystem = particleSystem;
+        this.gameInstance = null; // Gameインスタンスの参照
         this.obstacles = [];
         this.coins = [];
         this.potionChance = 0.01; // 1%の確率でポーションに変化
@@ -338,7 +339,8 @@ export class ObstacleManager {
             this.gameState.handleGameOver(
                 this.player.getModel(),
                 this.player.getRunningAction(),
-                this.audioManager
+                this.audioManager,
+                this.gameInstance
             );
         }
     }
@@ -381,6 +383,14 @@ export class ObstacleManager {
                 }
             );
         });
+    }
+
+    /**
+     * Gameインスタンスの参照を設定
+     * @param {Game} gameInstance - Gameクラスのインスタンス
+     */
+    setGameInstance(gameInstance) {
+        this.gameInstance = gameInstance;
     }
 
     reset() {
