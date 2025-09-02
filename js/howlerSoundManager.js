@@ -181,6 +181,47 @@ export class HowlerSoundManager {
         }
     }
 
+    // 世界切り替えに応じてBGMを変更
+    async switchBGM(isHellWorld) {
+        const targetBGM = isHellWorld ? 'jigoku' : 'chijou';
+        console.log(`HowlerJS: 世界切り替え - ${targetBGM}に変更`);
+        
+        try {
+            await this.playBGM(targetBGM);
+        } catch (error) {
+            console.error(`HowlerJS: 世界切り替えBGMエラー:`, error);
+        }
+    }
+
+    // フィーバータイムBGM開始
+    async startFeverTime() {
+        console.log('HowlerJS: フィーバータイムBGM開始');
+        try {
+            await this.playBGM('fever');
+        } catch (error) {
+            console.error('HowlerJS: フィーバータイムBGMエラー:', error);
+        }
+    }
+
+    // フィーバータイム終了時のBGM復帰
+    async endFeverTime(gameState = null) {
+        console.log('HowlerJS: フィーバータイム終了 - 通常BGMに復帰');
+        
+        let targetBGM = 'chijou'; // デフォルトは地上世界
+        
+        // GameStateが渡された場合は現在の世界に応じてBGMを決定
+        if (gameState && typeof gameState.getIsHellWorld === 'function') {
+            targetBGM = gameState.getIsHellWorld() ? 'jigoku' : 'chijou';
+            console.log(`HowlerJS: 現在の世界 - ${gameState.getIsHellWorld() ? '地獄' : '地上'}`);
+        }
+        
+        try {
+            await this.playBGM(targetBGM);
+        } catch (error) {
+            console.error('HowlerJS: フィーバータイム終了BGMエラー:', error);
+        }
+    }
+
     // 音量制御
     setVolume(soundKey, volume) {
         if (this.bgmSounds[soundKey]) {

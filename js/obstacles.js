@@ -64,7 +64,7 @@ export class ObstacleManager {
             this.feverTimeTimer = null;
             // フィーバータイム終了時にBGMを元に戻す
             if (this.audioManager) {
-                this.audioManager.endFeverTime();
+                this.audioManager.endFeverTime(this.gameState);
             }
         }, 5000); // 5秒後に終了
     }
@@ -236,11 +236,21 @@ export class ObstacleManager {
         }
 
         // コインの更新
-        for (const coin of this.coins) {
+        for (let i = this.coins.length - 1; i >= 0; i--) {
+            const coin = this.coins[i];
+            
+            // 既に処理済みのアイテムはスキップ
+            if (coin.processed) {
+                continue;
+            }
+            
             // コインは固定位置
             coin.rotation.y += 0.05;
 
             if (this.checkCoinCollision(coin)) {
+                // 重複処理を防ぐため即座に処理済みフラグを設定
+                coin.processed = true;
+                
                 // パーティクルエフェクトを生成（全てのアイテムで共通）
                 if (this.particleSystem) {
                     this.particleSystem.createCoinParticles(coin.position);
@@ -290,7 +300,11 @@ export class ObstacleManager {
                         }
                         break;
                 }
-                removeCoins.push(coin);
+                
+                // アイテムを即座にシーンから削除
+                this.scene.remove(coin);
+                this.coins.splice(i, 1);
+                continue;
             }
             
             if (coin.position.z > this.player.getModel().position.z + 5) {
