@@ -4,7 +4,7 @@
  */
 
 // スプレッドシートのIDを設定（実際のスプレッドシートIDに変更してください）
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE';
+const SPREADSHEET_ID = '1rkOfDyIr5YIljYlWzSr8z9oPIx3o3PvfytlHJX407S8';
 
 /**
  * Web Appのメインエントリポイント（GET）

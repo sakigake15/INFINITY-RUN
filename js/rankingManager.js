@@ -171,7 +171,10 @@ export class RankingManager {
 
         // top5形式の検証
         if (data.top5 && Array.isArray(data.top5)) {
-            return data.top5.every(item => 
+            // 1番目がヘッダーの場合は除外
+            const top5 = data.top5;
+            const startIdx = (typeof top5[0].score === 'string' && typeof top5[0].name === 'string') ? 1 : 0;
+            return top5.slice(startIdx).every(item => 
                 item && 
                 typeof item.score === 'number' && 
                 typeof item.name === 'string' && 
@@ -201,8 +204,10 @@ export class RankingManager {
         let ranking = [];
 
         if (data.top5) {
-            // top5形式を正規化
-            ranking = data.top5.map((item, index) => ({
+            // top5形式を正規化（ヘッダー除外）
+            const top5 = data.top5;
+            const startIdx = (typeof top5[0].score === 'string' && typeof top5[0].name === 'string') ? 1 : 0;
+            ranking = top5.slice(startIdx).map((item, index) => ({
                 rank: index + 1,
                 score: item.score,
                 name: item.name,
@@ -230,7 +235,6 @@ export class RankingManager {
             totalPlayers: ranking.length
         };
     }
-
     /**
      * ローディング状態を取得
      * @return {boolean}
