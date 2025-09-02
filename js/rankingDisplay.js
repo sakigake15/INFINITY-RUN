@@ -5,8 +5,6 @@
 export class RankingDisplay {
     constructor() {
         this.rankingDisplayElement = document.getElementById('rankingDisplay');
-        this.rankingErrorElement = document.getElementById('rankingError');
-        this.refreshButton = document.getElementById('refreshRanking');
         
         this.setupEventListeners();
         console.log('RankingDisplay初期化完了');
@@ -16,18 +14,13 @@ export class RankingDisplay {
      * イベントリスナーを設定
      */
     setupEventListeners() {
-        if (this.refreshButton) {
-            this.refreshButton.addEventListener('click', () => {
-                this.onRefreshRequested();
-            });
-        }
+        // エラー表示とリフレッシュボタンは削除されたため、イベントリスナーなし
     }
 
     /**
      * ローディング状態を表示
      */
     showLoading() {
-        this.hideError();
         this.rankingDisplayElement.innerHTML = `
             <div class="ranking-loading">
                 <div class="loading-spinner"></div>
@@ -41,8 +34,6 @@ export class RankingDisplay {
      * @param {Object} rankingData - 正規化されたランキングデータ
      */
     displayRanking(rankingData) {
-        this.hideError();
-        
         if (!rankingData || !rankingData.ranking || rankingData.ranking.length === 0) {
             this.showEmpty();
             return;
@@ -108,31 +99,28 @@ export class RankingDisplay {
     }
 
     /**
-     * エラー状態を表示
+     * エラー状態を表示（簡素化）
      * @param {string} errorMessage - エラーメッセージ
      */
     showError(errorMessage = 'ランキングの取得に失敗しました') {
-        this.rankingDisplayElement.innerHTML = '';
-        this.rankingErrorElement.classList.remove('hidden');
-        
-        const errorText = this.rankingErrorElement.querySelector('p');
-        if (errorText) {
-            errorText.textContent = errorMessage;
-        }
+        this.rankingDisplayElement.innerHTML = `
+            <div class="ranking-empty">
+                <p>${errorMessage}</p>
+            </div>
+        `;
     }
 
     /**
-     * エラー表示を隠す
+     * エラー表示を隠す（無効化）
      */
     hideError() {
-        this.rankingErrorElement.classList.add('hidden');
+        // エラー要素が削除されたため何もしない
     }
 
     /**
      * 空のランキング状態を表示
      */
     showEmpty() {
-        this.hideError();
         this.rankingDisplayElement.innerHTML = `
             <div class="ranking-empty">
                 <p>ランキングデータがありません</p>
@@ -170,10 +158,8 @@ export class RankingDisplay {
         if (userRank <= 5) {
             // ランキング内の場合はハイライト
             this.highlightUserScore(userScore);
-        } else {
-            // ランキング外の場合は情報表示
-            this.showRankOutInfo(userRank);
         }
+        // ランキング外の順位表示は削除
     }
 
     /**
@@ -214,24 +200,16 @@ export class RankingDisplay {
     }
 
     /**
-     * ランキング外情報を表示
+     * ランキング外情報を表示（無効化）
      * @param {number} rank - ユーザーの順位
      */
     showRankOutInfo(rank) {
-        // ランキング下部に情報を追加
-        const infoElement = document.createElement('div');
-        infoElement.className = 'ranking-info';
-        infoElement.innerHTML = `
-            <p>あなたの順位: ${rank}位</p>
-        `;
-        
-        // 既存の情報要素を削除
+        // 順位表示機能を無効化
+        // 既存の情報要素があれば削除
         const existingInfo = this.rankingDisplayElement.querySelector('.ranking-info');
         if (existingInfo) {
             existingInfo.remove();
         }
-        
-        this.rankingDisplayElement.appendChild(infoElement);
     }
 
     /**
@@ -266,8 +244,12 @@ export class RankingDisplay {
      * 表示状態をリセット
      */
     reset() {
-        this.hideError();
         this.rankingDisplayElement.innerHTML = '';
+        // 順位情報要素も削除
+        const existingInfo = this.rankingDisplayElement.querySelector('.ranking-info');
+        if (existingInfo) {
+            existingInfo.remove();
+        }
         console.log('RankingDisplay表示状態をリセット');
     }
 
@@ -284,7 +266,8 @@ export class RankingDisplay {
      * @return {boolean}
      */
     isShowingError() {
-        return !this.rankingErrorElement.classList.contains('hidden');
+        // エラー要素が削除されたため常にfalse
+        return false;
     }
 
     /**
