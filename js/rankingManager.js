@@ -189,33 +189,86 @@ export class RankingManager {
      * @return {boolean}
      */
     validateRankingData(data) {
+        console.log('検証開始 - データ:', data);
+        
         if (!data || typeof data !== 'object') {
+            console.log('検証失敗: データが存在しないか、オブジェクトではない');
             return false;
+        }
+
+        // エラーレスポンスの場合でも、success=falseかつtop5が空配列なら有効
+        if (data.success === false && data.top5 && Array.isArray(data.top5) && data.top5.length === 0) {
+            console.log('検証成功: エラーレスポンスだが空配列として有効');
+            return true;
         }
 
         // top5形式の検証
         if (data.top5 && Array.isArray(data.top5)) {
-            // 1番目がヘッダーの場合は除外
-            const top5 = data.top5;
-            const startIdx = (typeof top5[0].score === 'string' && typeof top5[0].name === 'string') ? 1 : 0;
-            return top5.slice(startIdx).every(item => 
-                item && 
-                typeof item.score === 'number' && 
-                typeof item.name === 'string' && 
-                typeof item.date === 'string'
-            );
+            console.log('top5配列を検証中...');
+            
+            // 空配列の場合は有効
+            if (data.top5.length === 0) {
+                console.log('検証成功: 空の配列');
+                return true;
+            }
+            
+            // ヘッダー行チェック - 最初の要素がヘッダーかどうか
+            const hasHeader = (data.top5.length > 0 && 
+                             typeof data.top5[0].score === 'string' && 
+                             typeof data.top5[0].name === 'string');
+            const startIdx = hasHeader ? 1 : 0;
+            
+            console.log('ヘッダー検出:', hasHeader, 'データ開始インデックス:', startIdx);
+            
+            // データがヘッダーのみの場合（実質的に空）
+            if (startIdx >= data.top5.length) {
+                console.log('検証成功: ヘッダーのみ（実質的に空）');
+                return true;
+            }
+            
+            // データ部分の検証
+            const dataItems = data.top5.slice(startIdx);
+            console.log('データ部分:', dataItems);
+            
+            const isValid = dataItems.every((item, index) => {
+                const itemValid = item && 
+                    (typeof item.score === 'number' || (!isNaN(Number(item.score)) && item.score !== '')) &&
+                    typeof item.name === 'string' && 
+                    typeof item.date === 'string';
+                
+                if (!itemValid) {
+                    console.log(`検証失敗: アイテム${index}が無効:`, item);
+                }
+                
+                return itemValid;
+            });
+            
+            console.log('データ部分検証結果:', isValid);
+            return isValid;
         }
 
         // ranking形式の検証
         if (data.ranking && Array.isArray(data.ranking)) {
-            return data.ranking.every(item => 
+            console.log('ranking配列を検証中...');
+            
+            // 空配列の場合は有効
+            if (data.ranking.length === 0) {
+                console.log('検証成功: 空のranking配列');
+                return true;
+            }
+            
+            const isValid = data.ranking.every(item => 
                 item && 
                 typeof item.rank === 'number' && 
                 typeof item.score === 'number' && 
                 typeof item.name === 'string'
             );
+            
+            console.log('ranking配列検証結果:', isValid);
+            return isValid;
         }
 
+        console.log('検証失敗: 有効な形式が見つかりません');
         return false;
     }
 
@@ -227,21 +280,38 @@ export class RankingManager {
     normalizeRankingData(data) {
         let ranking = [];
 
-        if (data.top5) {
-            // top5形式を正規化（ヘッダー除外）
-            const top5 = data.top5;
-            const startIdx = (typeof top5[0].score === 'string' && typeof top5[0].name === 'string') ? 1 : 0;
-            ranking = top5.slice(startIdx).map((item, index) => ({
-                rank: index + 1,
-                score: item.score,
-                name: item.name,
-                date: new Date(item.date).toLocaleDateString('ja-JP', {
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric'
-                })
-            }));
-        } else if (data.ranking) {
+        if (data.top5 && Array.isArray(data.top5)) {
+            console.log('top5形式を正規化中...');
+            
+            // 空配列の場合はそのまま
+            if (data.top5.length === 0) {
+                ranking = [];
+            } else {
+                // ヘッダー行チェック
+                const hasHeader = (typeof data.top5[0].score === 'string' && 
+                                 typeof data.top5[0].name === 'string');
+                const startIdx = hasHeader ? 1 : 0;
+                
+                console.log('正規化 - ヘッダー検出:', hasHeader, 'データ開始インデックス:', startIdx);
+                
+                // データ部分を正規化
+                const dataRows = data.top5.slice(startIdx);
+                ranking = dataRows.map((item, index) => {
+                    const score = typeof item.score === 'number' ? item.score : Number(item.score);
+                    return {
+                        rank: index + 1,
+                        score: score,
+                        name: item.name,
+                        date: item.date ? new Date(item.date).toLocaleDateString('ja-JP', {
+                            year: 'numeric',
+                            month: 'numeric',
+                            day: 'numeric'
+                        }) : ''
+                    };
+                }).filter(item => !isNaN(item.score)); // 無効なスコアを除外
+            }
+        } else if (data.ranking && Array.isArray(data.ranking)) {
+            console.log('ranking形式を正規化中...');
             // ranking形式はそのまま使用（日付フォーマットのみ調整）
             ranking = data.ranking.map(item => ({
                 ...item,
@@ -253,12 +323,15 @@ export class RankingManager {
             }));
         }
 
+        console.log('正規化完了:', ranking);
+        
         return {
             ranking: ranking,
             lastUpdated: new Date().toISOString(),
             totalPlayers: ranking.length
         };
     }
+    
     /**
      * ローディング状態を取得
      * @return {boolean}

@@ -237,13 +237,20 @@ function createSuccessResponse(message, rank, callback) {
  * @return {ContentService} - JSONレスポンス
  */
 function createRankingResponse(rankingData, callback) {
-  // top5形式でレスポンスを作成（既存のAPIとの互換性を保つ）
-  const response = {
-    top5: rankingData.map(item => ({
+  // top5形式でレスポンスを作成（ヘッダーを追加して既存のAPIとの互換性を保つ）
+  const top5WithHeader = [
+    // ヘッダー行を追加
+    { score: "スコア", name: "名前", date: "日付" },
+    // 実際のデータを追加
+    ...rankingData.map(item => ({
       score: item.score,
       name: item.name,
       date: item.date instanceof Date ? item.date.toISOString() : item.date
     }))
+  ];
+  
+  const response = {
+    top5: top5WithHeader
   };
   
   let output = JSON.stringify(response);
@@ -313,9 +320,10 @@ function formatDate(date) {
  */
 function getRankingData() {
   try {
-    // スプレッドシートIDが設定されていない場合はエラー
+    // スプレッドシートIDが設定されていない場合はテストデータを返す
     if (SPREADSHEET_ID === 'YOUR_SPREADSHEET_ID_HERE') {
-      throw new Error('スプレッドシートIDが設定されていません');
+      console.log('テスト環境でランキング取得');
+      return getTestRankingData();
     }
     
     const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getActiveSheet();
@@ -326,8 +334,22 @@ function getRankingData() {
       return [];
     }
     
-    // 上位5件のみ返す
-    return data.slice(0, 5).map((row, index) => ({
+    // スプレッドシートにヘッダー行がある場合を考慮
+    // 最初の行がヘッダー（文字列）かどうかをチェック
+    let startIndex = 0;
+    if (data.length > 0 && typeof data[0][0] === 'string' && isNaN(Number(data[0][0]))) {
+      // 最初の行がヘッダーの場合は1から開始
+      startIndex = 1;
+      console.log('ヘッダー行を検出、データは2行目から開始');
+    }
+    
+    // ヘッダーを除いた実際のデータから上位5件を取得
+    const actualData = data.slice(startIndex);
+    const top5Data = actualData.slice(0, 5);
+    
+    console.log('取得したランキングデータ:', top5Data);
+    
+    return top5Data.map((row, index) => ({
       rank: index + 1,
       score: row[0],
       name: row[1],
