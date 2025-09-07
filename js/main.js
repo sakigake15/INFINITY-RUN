@@ -38,7 +38,7 @@ class Game {
         );
 
         // ランキングシステムの初期化
-        this.rankingApiUrl = 'https://script.google.com/macros/s/AKfycbx_YtnS3e_oqr2gQsWTmJqu1jsm-_d_r7yeCUnwUYv-8sMVrMB2dtEFcodgivtO8kEB/exec';
+        this.rankingApiUrl = 'https://script.google.com/macros/s/AKfycbwLTnt3-Wfb5bWy5K11tcwTdM1B7OfS8eu8DUByXCwUO3O24ukgLAKDPGV2MF62544-/exec';
         this.rankingManager = new RankingManager(this.rankingApiUrl);
         this.rankingDisplay = new RankingDisplay();
         this.nameInputDialog = new NameInputDialog();

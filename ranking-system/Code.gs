@@ -132,10 +132,10 @@ function processRanking(score, name) {
     // 現在のデータを取得
     const data = sheet.getDataRange().getValues();
     
-    // 5位のスコアを取得（データが5件未満の場合は0とする）
+    // 5位のスコアを取得（ヘッダー行を考慮、データが6件未満の場合は0とする）
     let fifthScore = 0;
-    if (data.length >= 5) {
-      fifthScore = data[4][0]; // A列（スコア）の5行目
+    if (data.length >= 6) {
+      fifthScore = data[5][0]; // A列（スコア）の6行目（ヘッダー＋5件目）
     }
     
     // スコアが5位以下の場合は何もしない

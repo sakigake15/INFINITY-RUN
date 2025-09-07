@@ -70,8 +70,22 @@ export class RankingManager {
                 }
             }
             
-            // レスポンス形式の検証
+            // レスポンス形式の検証（詳細なデバッグ情報付き）
+            console.log('APIレスポンス生データ:', JSON.stringify(data, null, 2));
+            console.log('データ型:', typeof data);
+            console.log('data.success:', data.success);
+            console.log('data.error:', data.error);
+            console.log('data.top5:', data.top5);
+            
             if (!this.validateRankingData(data)) {
+                console.error('検証失敗 - データ詳細:', {
+                    hasTop5: !!(data && data.top5),
+                    isTop5Array: Array.isArray(data.top5),
+                    top5Length: data.top5 ? data.top5.length : 'N/A',
+                    firstItem: data.top5 && data.top5[0] ? data.top5[0] : 'N/A',
+                    hasRanking: !!(data && data.ranking),
+                    isRankingArray: Array.isArray(data.ranking)
+                });
                 throw new Error('無効なランキングデータ形式');
             }
 
@@ -85,18 +99,28 @@ export class RankingManager {
         } catch (error) {
             console.error('ランキングデータ取得エラー:', error);
             
+            // 特定のエラーの場合はリトライしない
+            if (error.message.includes('無効なランキングデータ形式') && this.retryCount > 0) {
+                console.log('データ形式エラーのため、リトライを停止');
+                this.retryCount = 0; // リトライカウントをリセット
+                return null;
+            }
+            
             // リトライ処理
             if (this.retryCount < this.maxRetries) {
                 this.retryCount++;
-                console.log(`リトライ ${this.retryCount}/${this.maxRetries}`);
+                console.log(`リトライ ${this.retryCount}/${this.maxRetries} - エラー: ${error.message}`);
                 
                 // 指数バックオフ（1秒、2秒、4秒）
                 const delay = Math.pow(2, this.retryCount - 1) * 1000;
+                console.log(`${delay/1000}秒後にリトライします...`);
                 await this.sleep(delay);
                 
                 return await this.fetchRankingFromAPI();
             }
 
+            console.error('最大リトライ回数に達しました。ランキング取得を諦めます。');
+            this.retryCount = 0; // リトライカウントをリセット
             return null;
 
         } finally {
